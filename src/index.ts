@@ -10,7 +10,7 @@ await fastify.register(swagger, {
   mode: "static",
   specification: {
     baseDir: process.cwd(),
-    path: "openapi.yaml",
+    path: "./src/docs/openapi.yaml",
   },
 });
 await fastify.register(swaggerUi, {

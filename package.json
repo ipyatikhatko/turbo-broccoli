@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "generate:types": "pnpm exec openapi-typescript ./src/docs/openapi.yaml -o ./src/types/openapi.d.ts"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
+    "openapi-typescript": "^5.4.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
