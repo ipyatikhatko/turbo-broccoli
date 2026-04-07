@@ -3,3 +3,15 @@
 
 /dist
 /node_modules
+
+# TypeScript emit from a root-level vitest config (actual config: tests/config/vitest.config.ts)
+/vitest.config.js
+/vitest.config.js.map
+/vitest.config.d.ts
+/vitest.config.d.ts.map
+
+# TypeScript emit next to test sources (Vitest runs .ts directly)
+/tests/**/*.js
+/tests/**/*.js.map
+/tests/**/*.d.ts
+/tests/**/*.d.ts.map

@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
+import { subscriptionsRoutes } from "@/modules/subscriptions/index.js";
 
 const fastify = Fastify({
   logger: true,
@@ -16,6 +17,7 @@ await fastify.register(swagger, {
 await fastify.register(swaggerUi, {
   routePrefix: "/docs",
 });
+await fastify.register(subscriptionsRoutes);
 
 fastify.get("/", async (request, reply) => {
   return { hello: "world" };
