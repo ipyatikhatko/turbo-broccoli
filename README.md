@@ -2,8 +2,7 @@
 
 API service for subscribing users to email notifications about new releases in GitHub repositories.
 
-OpenAPI contract: `/src/docs/openapi.yaml`  
-Swagger UI: `http://localhost:{PORT}/docs`
+OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.swagger.io/) or any OpenAPI viewer to inspect it)
 
 ## API Endpoints
 
@@ -19,7 +18,6 @@ Swagger UI: `http://localhost:{PORT}/docs`
 - HTTP framework: Fastify
 - Build: esbuild (bundle to `dist/index.js`; `packages: external`)
 - Package manager: pnpm
-- API docs: `@fastify/swagger`, `@fastify/swagger-ui`
 - Database: PostgreSQL
 - ORM: Drizzle ORM + Drizzle Kit migrations
 - Containerization: Docker + Docker Compose
