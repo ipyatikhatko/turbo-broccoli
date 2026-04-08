@@ -1,7 +1,9 @@
 import "dotenv/config";
 import Fastify from "fastify";
-import swagger from "@fastify/swagger";
-import swaggerUi from "@fastify/swagger-ui";
+import formbody from "@fastify/formbody";
+// import swagger from "@fastify/swagger";
+// import swaggerUi from "@fastify/swagger-ui";
+// import type { OpenAPIV2 } from "openapi-types";
 
 import { connectAndMigrate } from "@/db/index.ts";
 import { subscriptionsRoutes } from "@/modules/subscriptions/index.ts";
@@ -22,25 +24,28 @@ fastify.addHook("onClose", async () => {
   await pool.end();
 });
 
-await fastify.register(swagger, {
-  mode: "static",
-  specification: {
-    baseDir: process.cwd(),
-    path: "./src/docs/openapi.yaml",
-  },
-});
-await fastify.register(swaggerUi, {
-  routePrefix: "/docs",
-});
+// function applySwaggerHostFromEnv(spec: OpenAPIV2.Document): OpenAPIV2.Document {
+//   const host = process.env.SWAGGER_HOST?.trim();
+//   if (host) spec.host = host;
+//   const scheme = process.env.SWAGGER_SCHEME?.trim().toLowerCase();
+//   if (scheme === "http" || scheme === "https") spec.schemes = [scheme];
+//   return spec;
+// }
+
+// await fastify.register(swagger, {
+//   mode: "static",
+//   specification: {
+//     baseDir: process.cwd(),
+//     path: "./src/docs/openapi.yaml",
+//     postProcessor: (spec) => applySwaggerHostFromEnv(spec as OpenAPIV2.Document),
+//   },
+// });
+// await fastify.register(swaggerUi, {
+//   routePrefix: "/docs",
+// });
+await fastify.register(formbody);
 await fastify.register(subscriptionsRoutes);
 
-fastify.get("/", async (request, reply) => {
-  return { hello: "world" };
-});
-
-/**
- * Run the server!
- */
 const start = async () => {
   try {
     await fastify.listen({
