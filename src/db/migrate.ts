@@ -1,17 +1,14 @@
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import type { Db } from "./client.ts";
 import { createDb } from "./client.ts";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 /**
- * SQL migrations in repo root `drizzle/`, produced by `pnpm run db:generate`.
- * Path works for both `tsx src/index.ts` and `node dist/index.ts`.
+ * SQL migrations in repo root `drizzle/` (from `pnpm run db:generate`).
+ * Uses cwd so it stays correct when the app is bundled to a single `dist/index.js`.
  */
-export const migrationsFolder = join(__dirname, "../../drizzle");
+export const migrationsFolder = join(process.cwd(), "drizzle");
 
 export async function runMigrations(db: Db): Promise<void> {
   await migrate(db, { migrationsFolder });

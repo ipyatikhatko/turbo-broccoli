@@ -17,6 +17,7 @@ Swagger UI: `http://localhost:{PORT}/docs`
 - Runtime: Node.js
 - Language: TypeScript (ESM)
 - HTTP framework: Fastify
+- Build: esbuild (bundle to `dist/index.js`; `packages: external`)
 - Package manager: pnpm
 - API docs: `@fastify/swagger`, `@fastify/swagger-ui`
 - Database: PostgreSQL
@@ -71,7 +72,10 @@ pnpm dev
 
 ### Build and Start
 
+Production bundle is built with **esbuild** (`scripts/build.mjs`). Typechecking only (no emit) uses **TypeScript**:
+
 ```bash
+pnpm typecheck
 pnpm build
 pnpm start
 ```
