@@ -1,3 +1,3 @@
-export { subscriptionsRoutes } from "./subscriptions.routes.js";
-export { createSubscriptionsController } from "./subscriptions.controller.js";
-export { createSubscriptionsService } from "./subscriptions.service.js";
+export { subscriptionsRoutes } from "./subscriptions.routes.ts";
+export { createSubscriptionsController } from "./subscriptions.controller.ts";
+export { createSubscriptionsService } from "./subscriptions.service.ts";

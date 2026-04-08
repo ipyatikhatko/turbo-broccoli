@@ -1,10 +1,24 @@
 import Fastify from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
-import { subscriptionsRoutes } from "@/modules/subscriptions/index.js";
+
+import { connectAndMigrate } from "@/db/index.ts";
+import { subscriptionsRoutes } from "@/modules/subscriptions/index.ts";
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required");
+}
+
+const { db, pool } = await connectAndMigrate(databaseUrl);
 
 const fastify = Fastify({
   logger: true,
+});
+
+fastify.decorate("db", db);
+fastify.addHook("onClose", async () => {
+  await pool.end();
 });
 
 await fastify.register(swagger, {

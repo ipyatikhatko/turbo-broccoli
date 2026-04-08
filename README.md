@@ -61,6 +61,11 @@ SMTP_FROM=
 ```bash
 pnpm install
 cp .env.example .env
+```
+
+PostgreSQL must be reachable at `DATABASE_URL` before starting the app (migrations run on boot).
+
+```bash
 pnpm dev
 ```
 
@@ -86,17 +91,16 @@ docker compose up --build
 
 ## Database and Migrations
 
-Drizzle manages schema and migrations.  
-Service startup includes migration execution before serving requests.
+- **ORM**: Drizzle with the `pg` driver (`src/db/client.ts`).
+- **Schema**: `src/db/schema.ts`. Columns **`email`**, **`repo`**, **`confirmed`**, **`last_seen_tag`** match the OpenAPI `Subscription` definition in `src/types/openapi.d.ts`; extra columns (**tokens**, timestamps, `id`) are persistence-only.
+- **SQL migrations**: generated into `drizzle/` (committed). After changing the schema, run:
 
-Core subscription fields:
+```bash
+pnpm run db:generate
+```
 
-- `email`
-- `repo`
-- `confirmed`
-- `confirm_token`
-- `unsubscribe_token`
-- `last_seen_tag`
+- **On boot**: `src/index.ts` calls `connectAndMigrate()`, which applies any pending migrations from `drizzle/`, then starts Fastify. The DB instance is available as `fastify.db`.
+- **API mapping**: `src/db/subscription-mapper.ts` maps rows to `definitions["Subscription"]` for responses.
 
 ## Constraints
 

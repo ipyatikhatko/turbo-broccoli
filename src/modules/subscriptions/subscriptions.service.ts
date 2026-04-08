@@ -4,7 +4,7 @@ import type {
   SubscriptionsQuery,
   TokenParams,
   UnsubscribeTokenParams,
-} from "./subscriptions.types.js";
+} from "./subscriptions.types.ts";
 
 export interface SubscriptionsService {
   subscribe(input: SubscribeBody): Promise<void>;

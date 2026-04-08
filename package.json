@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "generate:types": "pnpm exec openapi-typescript ./src/docs/openapi.yaml -o ./src/types/openapi.d.ts",
+    "db:generate": "drizzle-kit generate",
     "test": "vitest run --config tests/config/vitest.config.ts",
     "test:watch": "vitest --config tests/config/vitest.config.ts"
   },
@@ -18,11 +19,15 @@
   "dependencies": {
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.4",
-    "openapi-types": "^12.1.3"
+    "openapi-types": "^12.1.3",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "openapi-typescript": "^5.4.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",

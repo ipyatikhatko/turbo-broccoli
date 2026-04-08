@@ -1,34 +1,34 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { SubscriptionsService } from "./subscriptions.service.js";
+import type { SubscriptionsService } from "./subscriptions.service.ts";
 import type {
   SubscribeBody,
   SubscriptionsQuery,
   TokenParams,
   UnsubscribeTokenParams,
-} from "./subscriptions.types.js";
+} from "./subscriptions.types.ts";
 
 export interface SubscriptionsController {
   subscribe(
     request: FastifyRequest<{ Body: SubscribeBody }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ): Promise<void>;
   confirm(
     request: FastifyRequest<{ Params: TokenParams }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ): Promise<void>;
   unsubscribe(
     request: FastifyRequest<{ Params: UnsubscribeTokenParams }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ): Promise<void>;
   list(
     request: FastifyRequest<{ Querystring: SubscriptionsQuery }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ): Promise<void>;
 }
 
 export function createSubscriptionsController(
-  service: SubscriptionsService,
+  service: SubscriptionsService
 ): SubscriptionsController {
   return {
     async subscribe(request, reply) {
@@ -44,7 +44,9 @@ export function createSubscriptionsController(
       reply.code(501).send({ message: "Not implemented yet" });
     },
     async list(request, reply) {
-      const subscriptions = await service.list(request.query as SubscriptionsQuery);
+      const subscriptions = await service.list(
+        request.query as SubscriptionsQuery
+      );
       reply.code(501).send(subscriptions);
     },
   };

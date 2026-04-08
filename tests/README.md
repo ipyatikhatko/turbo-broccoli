@@ -7,6 +7,6 @@ Vitest test space for this project.
 - `tests/unit` for unit tests
 - `tests/integration` for optional integration tests
 
-## Planned command
+## Test command
 
 - `pnpm test` -> Vitest
