@@ -1,22 +1,26 @@
 import { randomBytes } from "node:crypto";
 
-import { subscriptionRowToApi } from "../../db/subscription-mapper.ts";
+import { subscriptionRowToApi } from "../../../db/subscription-mapper.ts";
 import {
   GithubRepoNotFoundError,
   InvalidEmailError,
   InvalidRepoFormatError,
+  SubscriptionAlreadyConfirmedError,
   SubscriptionConflictError,
+  SubscriptionNotFoundError,
   type IGitHubRepos,
   type ISubscriptionRepository,
-} from "./domain.ts";
+} from "../domain/index.ts";
 import type {
   SubscribeBody,
   SubscriptionsListResponse,
   SubscriptionsQuery,
   TokenParams,
   UnsubscribeTokenParams,
-} from "./types.ts";
-import { isValidEmailFormat, parseOwnerRepo } from "./validation.ts";
+} from "../types.ts";
+import { isValidEmailFormat, parseOwnerRepo } from "../validation.ts";
+import type { ResendService } from "../adapters/resend.ts";
+import { ResendApiError } from "../domain/errors.ts";
 
 export interface SubscriptionsService {
   subscribe(input: SubscribeBody): Promise<void>;
@@ -32,6 +36,7 @@ function randomToken(): string {
 export function createSubscriptionsService(deps: {
   github: IGitHubRepos;
   subscriptions: ISubscriptionRepository;
+  resend: ResendService;
 }): SubscriptionsService {
   return {
     async subscribe(input) {
@@ -50,15 +55,32 @@ export function createSubscriptionsService(deps: {
       );
       if (existing) throw new SubscriptionConflictError();
 
+      const confirmToken = randomToken();
+      const unsubscribeToken = randomToken();
+
+      const email = await deps.resend.sendConfirmationEmail(
+        input.email,
+        confirmToken
+      );
+      if (email.error) throw new ResendApiError(email.error.message);
+
       await deps.subscriptions.insertPending({
         email: input.email.trim(),
         repo: input.repo.trim(),
-        confirmToken: randomToken(),
-        unsubscribeToken: randomToken(),
+        confirmToken,
+        unsubscribeToken,
       });
     },
 
-    async confirm(_input) {},
+    async confirm(input) {
+      const subscription = await deps.subscriptions.findByConfirmToken(
+        input.token
+      );
+      if (!subscription) throw new SubscriptionNotFoundError();
+      if (subscription.confirmed) throw new SubscriptionAlreadyConfirmedError();
+
+      await deps.subscriptions.confirm(subscription.confirmToken);
+    },
 
     async unsubscribe(_input) {},
 

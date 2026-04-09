@@ -1,13 +1,13 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { isSubscriptionDomainError } from "./domain.ts";
-import type { SubscriptionsService } from "./service.ts";
+import { isSubscriptionDomainError } from "../domain/index.ts";
+import type { SubscriptionsService } from "../application/service.ts";
 import type {
   SubscribeBody,
   SubscriptionsQuery,
   TokenParams,
   UnsubscribeTokenParams,
-} from "./types.ts";
+} from "../types.ts";
 
 export interface SubscriptionsController {
   subscribe(
@@ -30,25 +30,38 @@ export interface SubscriptionsController {
 
 function handleDomainError(reply: FastifyReply, err: unknown): boolean {
   if (!isSubscriptionDomainError(err)) return false;
+  const errorResponse = err.toResponse();
+
   switch (err.code) {
     case "INVALID_REPO_FORMAT":
-      reply.code(400).send(err.message);
-      return true;
+      reply.code(400);
+      break;
     case "INVALID_EMAIL":
-      reply.code(400).send(err.message);
-      return true;
+      reply.code(400);
+      break;
     case "GITHUB_REPO_NOT_FOUND":
-      reply.code(404).send(err.message);
-      return true;
+      reply.code(404);
+      break;
     case "SUBSCRIPTION_CONFLICT":
-      reply.code(409).send(err.message);
-      return true;
+      reply.code(409);
+      break;
     case "GITHUB_RATE_LIMITED":
-      reply.code(429).send(err.message);
-      return true;
+      reply.code(429);
+      break;
+    case "SUBSCRIPTION_NOT_FOUND":
+      reply.code(404);
+      break;
+    case "SUBSCRIPTION_ALREADY_CONFIRMED":
+    case "INVALID_TOKEN":
+      reply.code(400);
+      break;
     default:
-      return false;
+      reply.code(500);
+      break;
   }
+
+  reply.send(errorResponse);
+  return true;
 }
 
 export function createSubscriptionsController(
@@ -67,7 +80,7 @@ export function createSubscriptionsController(
     async confirm(request, reply) {
       try {
         await service.confirm(request.params as TokenParams);
-        reply.code(501).send({ message: "Not implemented yet" });
+        reply.code(200).send();
       } catch (err) {
         if (handleDomainError(reply, err)) return;
         throw err;

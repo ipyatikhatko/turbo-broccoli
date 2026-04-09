@@ -1,6 +1,6 @@
 import type { Octokit } from "octokit";
 
-import { GithubRateLimitedError, type IGitHubRepos } from "./domain.ts";
+import { GithubRateLimitedError, type IGitHubRepos } from "../domain/index.ts";
 
 function getErrorStatus(err: unknown): number | undefined {
   if (

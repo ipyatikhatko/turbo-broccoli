@@ -3,6 +3,7 @@
 
 /dist
 /node_modules
+.pnpm-store
 
 # TypeScript emit from a root-level vitest config (actual config: tests/config/vitest.config.ts)
 /vitest.config.js

@@ -1,12 +1,12 @@
 import type { definitions } from "@/types/openapi.d.ts";
 
-import type { SubscriptionRow } from "./schema.ts";
+import type { SubscriptionListRow } from "./schema.ts";
 
 /**
  * Map a DB row to the OpenAPI `Subscription` definition (response shape).
  */
 export function subscriptionRowToApi(
-  row: SubscriptionRow
+  row: SubscriptionListRow
 ): definitions["Subscription"] {
   const out: definitions["Subscription"] = {
     email: row.email,

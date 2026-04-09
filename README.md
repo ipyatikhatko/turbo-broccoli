@@ -94,7 +94,7 @@ docker compose up --build
 ## Database and Migrations
 
 - **ORM**: Drizzle with the `pg` driver (`src/db/client.ts`).
-- **Schema**: `src/db/schema.ts`. Columns **`email`**, **`repo`**, **`confirmed`**, **`last_seen_tag`** match the OpenAPI `Subscription` definition in `src/types/openapi.d.ts`; extra columns (**tokens**, timestamps, `id`) are persistence-only.
+- **Schema**: `src/db/schema.ts`. Data is normalized into **`repos`** (with `full_name`, `last_seen_tag`) and **`subscriptions`** (email/tokens/confirmed + `repo_id`). The API response shape remains OpenAPI-compatible via `src/db/subscription-mapper.ts`.
 - **SQL migrations**: generated into `drizzle/` (committed). After changing the schema, run:
 
 ```bash
