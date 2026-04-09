@@ -27,5 +27,6 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/src/docs ./src/docs
+COPY --from=email-build /app/src/mail/compiled ./src/mail/compiled
 EXPOSE 3000
 CMD ["node", "dist/index.js"]

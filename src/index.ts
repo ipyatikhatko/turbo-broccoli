@@ -27,6 +27,7 @@ await fastify.register(subscriptionsRoutes);
 const start = async () => {
   try {
     await fastify.listen({
+      host: "0.0.0.0",
       port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
     });
   } catch (err) {

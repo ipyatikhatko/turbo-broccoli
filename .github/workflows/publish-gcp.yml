@@ -1,0 +1,64 @@
+# Build and push container image to Google Artifact Registry (*.docker.pkg.dev).
+
+name: GCP — push image to Artifact Registry
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: turbo-broccoli
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require GCP_REGION
+        run: |
+          if [ -z "${{ vars.GCP_REGION }}" ]; then
+            echo "Set Actions variable GCP_REGION (e.g. us-central1). Use the same region as your Artifact Registry Docker repository."
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Build and push image
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          REGION: ${{ vars.GCP_REGION }}
+          AR_REPO: ${{ vars.GCP_ARTIFACT_REGISTRY_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          REPO="${AR_REPO}"
+          if [ -z "${REPO}" ]; then REPO=turbo-broccoli; fi
+          HOST="${REGION}-docker.pkg.dev"
+          IMAGE="${HOST}/${PROJECT_ID}/${REPO}/${{ env.IMAGE_NAME }}"
+          docker build \
+            --tag "${IMAGE}:${GITHUB_SHA}" \
+            --tag "${IMAGE}:latest" \
+            .
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          docker push "${IMAGE}:latest"
