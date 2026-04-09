@@ -4,6 +4,7 @@ import type { SubscriptionListRow, SubscriptionRow } from "../../../db/schema.ts
 
 export interface IGitHubRepos {
   repoExists(owner: string, repo: string): Promise<boolean>;
+  getLatestReleaseTag(owner: string, repo: string): Promise<string | null>;
 }
 
 export interface PendingSubscriptionInput {

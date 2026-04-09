@@ -1,0 +1,17 @@
+<component src="layouts/main.html">
+  <h1 class="m-0 text-2xl font-bold text-slate-900">
+    Unsubscribe confirmation
+  </h1>
+  <p class="mt-4 text-red text-base leading-7 text-slate-600">
+    You are unsubscribing from release notifications for
+    <strong>{{ repo }}</strong>.
+  </p>
+  <p class="mt-8">
+    <a
+      href="{{ unsubscribeUrl }}"
+      class="appearance-none rounded-md unset inline-block bg-slate-900 px-6 py-3 text-sm font-semibold text-white no-underline"
+    >
+      Unsubscribe
+    </a>
+  </p>
+</component>

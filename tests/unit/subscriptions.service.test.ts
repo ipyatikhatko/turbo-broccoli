@@ -33,6 +33,7 @@ describe("createSubscriptionsService", () => {
     const service = createSubscriptionsService({
       github: {
         repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn().mockResolvedValue("v1.2.3"),
       },
       subscriptions,
       resend,
@@ -44,6 +45,12 @@ describe("createSubscriptionsService", () => {
     });
 
     expect(resend.sendConfirmationEmail).toHaveBeenCalledTimes(1);
+    expect(resend.sendConfirmationEmail).toHaveBeenCalledWith(
+      "a@example.com",
+      expect.any(String),
+      "golang/go",
+      "v1.2.3"
+    );
     expect(subscriptions.insertPending).toHaveBeenCalledTimes(1);
     expect(subscriptions.insertPending.mock.calls[0]?.[0]).toMatchObject({
       email: "a@example.com",
@@ -59,7 +66,7 @@ describe("createSubscriptionsService", () => {
 
   it("subscribe throws InvalidRepoFormatError for bad slug", async () => {
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn() },
+      github: { repoExists: vi.fn(), getLatestReleaseTag: vi.fn() },
       subscriptions: createRepositoryMock(),
       resend: createResendMock(),
     });
@@ -71,7 +78,10 @@ describe("createSubscriptionsService", () => {
 
   it("subscribe throws GithubRepoNotFoundError for non-existent repo", async () => {
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn().mockResolvedValue(false) },
+      github: {
+        repoExists: vi.fn().mockResolvedValue(false),
+        getLatestReleaseTag: vi.fn(),
+      },
       subscriptions: createRepositoryMock(),
       resend: createResendMock(),
     });
@@ -95,7 +105,10 @@ describe("createSubscriptionsService", () => {
     });
 
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn().mockResolvedValue(true) },
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
       subscriptions,
       resend: createResendMock(),
     });
@@ -114,7 +127,10 @@ describe("createSubscriptionsService", () => {
     });
 
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn().mockResolvedValue(true) },
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn().mockResolvedValue("v1.2.3"),
+      },
       subscriptions,
       resend,
     });
@@ -139,7 +155,10 @@ describe("createSubscriptionsService", () => {
     });
 
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn().mockResolvedValue(true) },
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
       subscriptions,
       resend: createResendMock(),
     });
@@ -153,7 +172,10 @@ describe("createSubscriptionsService", () => {
     subscriptions.findByConfirmToken.mockResolvedValue(null);
 
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn().mockResolvedValue(true) },
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
       subscriptions,
       resend: createResendMock(),
     });
@@ -177,7 +199,10 @@ describe("createSubscriptionsService", () => {
     });
 
     const service = createSubscriptionsService({
-      github: { repoExists: vi.fn().mockResolvedValue(true) },
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
       subscriptions,
       resend: createResendMock(),
     });

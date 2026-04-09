@@ -9,6 +9,8 @@
     "build": "node scripts/build.mjs",
     "typecheck": "tsc",
     "start": "node dist/index.js",
+    "email:build": "maizzle build --config maizzle.config.cjs",
+    "email:serve": "maizzle serve --config maizzle.config.cjs",
     "generate:types": "pnpm exec openapi-typescript ./src/docs/openapi.yaml -o ./src/types/openapi.d.ts",
     "db:generate": "drizzle-kit generate",
     "test": "vitest run --config tests/config/vitest.config.ts",
@@ -27,11 +29,14 @@
     "resend": "^6.10.0"
   },
   "devDependencies": {
+    "@maizzle/cli": "^2.0.0",
+    "@maizzle/framework": "^5.5.0",
     "@types/node": "^25.5.2",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.0",
     "openapi-typescript": "^5.4.0",
+    "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vitest": "^2.1.9"

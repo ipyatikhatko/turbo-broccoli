@@ -4,9 +4,15 @@ import {
   type CreateEmailResponse,
   type CreateBatchResponse,
 } from "resend";
-import type { SubscriptionRelease } from "@/modules/subscriptions/types.ts";
+import {
+  renderConfirmTemplate,
+  renderReleaseTemplate,
+  renderUnsubscribeTemplate,
+} from "../../../mail/renderer.ts";
+import type { SubscriptionRelease } from "../types.ts";
 
 const RESEND_FROM = process.env.RESEND_FROM;
+const BASE_URL = process.env.BASE_URL;
 
 export function createResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -29,14 +35,22 @@ export function createEmail(
   };
 }
 
+function getBaseUrl(): string {
+  if (!BASE_URL) throw new Error("BASE_URL is not set");
+  return BASE_URL.replace(/\/+$/, "");
+}
+
 export interface ResendService {
   sendConfirmationEmail(
     email: string,
-    token: string
+    token: string,
+    repo: string,
+    currentReleaseTag: string
   ): Promise<CreateEmailResponse>;
   sendUnsubscribeEmail(
     email: string,
-    token: string
+    token: string,
+    repo: string
   ): Promise<CreateEmailResponse>;
   sendReleasesBatchEmail(
     emails: string[],
@@ -52,12 +66,17 @@ export function createResendService(resend: Resend): ResendService {
      * @param token - The confirmation token.
      * @returns The email send response.
      */
-    async sendConfirmationEmail(email, token) {
+    async sendConfirmationEmail(email, token, repo, currentReleaseTag) {
+      const html = await renderConfirmTemplate({
+        confirmUrl: `${getBaseUrl()}/api/confirm/${encodeURIComponent(token)}`,
+        repo,
+        tag: currentReleaseTag,
+      });
       return resend.emails.send(
         createEmail(
           email,
           "Confirm your email",
-          `<p>Click <a href="${process.env.BASE_URL}/api/confirm/${token}">here</a> to confirm your email.</p>`
+          html
         )
       );
     },
@@ -67,12 +86,18 @@ export function createResendService(resend: Resend): ResendService {
      * @param token - The unsubscribe token.
      * @returns The email unsubscribe response.
      */
-    async sendUnsubscribeEmail(email, token) {
+    async sendUnsubscribeEmail(email, token, repo) {
+      const html = await renderUnsubscribeTemplate({
+        unsubscribeUrl: `${getBaseUrl()}/api/unsubscribe/${encodeURIComponent(
+          token
+        )}`,
+        repo,
+      });
       return resend.emails.send(
         createEmail(
           email,
           "Unsubscribe from GitHub Releases",
-          `<p>Click <a href="${process.env.BASE_URL}/api/unsubscribe/${token}">here</a> to unsubscribe from GitHub Releases.</p>`
+          html
         )
       );
     },
@@ -87,17 +112,17 @@ export function createResendService(resend: Resend): ResendService {
       release: SubscriptionRelease
     ) {
       return resend.batch.send(
-        emails.map((email) =>
+        await Promise.all(
+          emails.map(async (email) =>
           createEmail(
             email,
             "GitHub Releases",
-            `<p>Here is the latest release for <strong>${
-              release.repo
-            }</strong>:</p><p>${
-              release.last_seen_tag ?? "new release detected"
-            }</p>`
+            await renderReleaseTemplate({
+              repo: release.repo,
+              tag: release.last_seen_tag ?? "new release detected",
+            })
           )
-        )
+        ))
       );
     },
   };

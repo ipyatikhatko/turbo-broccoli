@@ -1,0 +1,18 @@
+<component src="layouts/main.html">
+  <h1 class="m-0 text-2xl font-bold text-slate-900">New release available</h1>
+  <div class="mt-4">
+    <x-release-badge repo="{{ repo }}" tag="{{ tag }}" />
+    <p class="mt-4 text-sm text-slate-600">
+      A new release of <strong>{{ repo }}</strong> is available.
+    </p>
+    <p class="mt-4 text-sm text-slate-600">
+      The latest tag is <strong>{{ tag }}</strong>.
+    </p>
+    <p class="mt-4 text-sm text-slate-600">
+      You can view the release on GitHub:
+      <a href="https://github.com/{{ repo }}/releases/{{ tag }}">
+        {{ repo }} - {{ tag }}
+      </a>
+    </p>
+  </div>
+</component>

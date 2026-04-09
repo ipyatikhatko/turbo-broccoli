@@ -6,6 +6,12 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
+FROM deps AS email-build
+COPY maizzle.config.cjs ./maizzle.config.cjs
+COPY src/mail ./src/mail
+COPY tailwind.config.cjs ./tailwind.config.cjs
+RUN pnpm email:build
+
 FROM deps AS build
 COPY tsconfig.json ./
 COPY scripts ./scripts

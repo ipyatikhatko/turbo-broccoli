@@ -1,0 +1,20 @@
+<component src="layouts/main.html">
+  <h1 class="m-0 text-2xl font-bold text-slate-900">
+    Confirm your subscription
+  </h1>
+  <p class="mt-4 text-red text-base leading-7 text-slate-600">
+    You are about to subscribe to <strong>{{ repo }}</strong>. <br />
+    Click the button below to confirm your email for release notifications.
+  </p>
+  <p class="mt-4">
+    <a
+      href="{{ confirmUrl }}"
+      class="inline-block rounded-md bg-slate-900 px-6 py-3 text-sm font-semibold text-white no-underline"
+    >
+      Confirm subscription
+    </a>
+  </p>
+  <p class="mt-6 text-xs leading-6 text-slate-500">
+    If you didn't request this, you can ignore this email.
+  </p>
+</component>

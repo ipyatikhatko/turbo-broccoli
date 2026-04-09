@@ -30,5 +30,22 @@ export function createGitHubRepos(octokit: Octokit): IGitHubRepos {
         throw err;
       }
     },
+    async getLatestReleaseTag(owner, repo) {
+      try {
+        const res = await octokit.request(
+          "GET /repos/{owner}/{repo}/releases/latest",
+          {
+            owner,
+            repo,
+          },
+        );
+        return res.data.tag_name ?? null;
+      } catch (err: unknown) {
+        const status = getErrorStatus(err);
+        if (status === 404) return null;
+        if (status === 429) throw new GithubRateLimitedError();
+        throw err;
+      }
+    },
   };
 }

@@ -20,6 +20,7 @@ OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.
 - Package manager: pnpm
 - Database: PostgreSQL
 - ORM: Drizzle ORM + Drizzle Kit migrations
+- Email templates: Maizzle + Tailwind (compiled to `src/mail/compiled`)
 - Containerization: Docker + Docker Compose
 - Testing: Vitest
 - Type generation: `openapi-typescript` **5.4.0** (supports Swagger / OpenAPI **2.0**; the contract is `swagger: "2.0"` in `src/docs/openapi.yaml`)
@@ -40,14 +41,20 @@ Use `.env`:
 
 ```env
 PORT=3000
+BASE_URL=http://localhost:3000
 DATABASE_URL=postgresql://postgres:postgres@db:5432/releases
 GITHUB_TOKEN=
-SMTP_HOST=
-SMTP_PORT=
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
+RESEND_API_KEY=
+RESEND_FROM=
 ```
+
+Email templates are built with:
+
+```bash
+pnpm email:build
+```
+
+Run this whenever templates under `src/mail/source/templates` change.
 
 `GITHUB_TOKEN` behavior:
 

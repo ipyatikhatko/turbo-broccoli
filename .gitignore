@@ -4,6 +4,8 @@
 /dist
 /node_modules
 .pnpm-store
+/src/mail/compiled
+.DS_Store
 
 # TypeScript emit from a root-level vitest config (actual config: tests/config/vitest.config.ts)
 /vitest.config.js

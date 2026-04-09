@@ -58,9 +58,16 @@ export function createSubscriptionsService(deps: {
       const confirmToken = randomToken();
       const unsubscribeToken = randomToken();
 
+      const latestReleaseTag = await deps.github.getLatestReleaseTag(
+        parsedSlug.owner,
+        parsedSlug.repo
+      );
+
       const email = await deps.resend.sendConfirmationEmail(
         input.email,
-        confirmToken
+        confirmToken,
+        input.repo.trim(),
+        latestReleaseTag ?? "no release yet"
       );
       if (email.error) throw new ResendApiError(email.error.message);
 
