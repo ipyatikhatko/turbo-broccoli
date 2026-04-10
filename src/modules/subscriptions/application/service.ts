@@ -60,11 +60,16 @@ export function createSubscriptionsService(deps: {
 
       const confirmToken = randomToken();
       const unsubscribeToken = randomToken();
+      const currentReleaseTag = await deps.github.getLatestReleaseTag(
+        parsedSlug.owner,
+        parsedSlug.repo
+      );
 
       const email = await deps.resend.sendConfirmationEmail(
         input.email,
         confirmToken,
-        input.repo.trim()
+        input.repo.trim(),
+        currentReleaseTag
       );
       if (email.error) throw new ResendApiError(email.error.message);
 

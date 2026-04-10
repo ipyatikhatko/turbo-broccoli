@@ -140,6 +140,33 @@ describe("createSubscriptionsScanner", () => {
     });
   });
 
+  it("initializes baseline tag on first scan and does not send notifications", async () => {
+    const deps = createDeps();
+    deps.subscriptions.findActiveForScan.mockResolvedValue([
+      {
+        email: "a@example.com",
+        repo: "golang/go",
+        unsubscribeToken: "unsub-1",
+        lastSeenTag: null,
+      },
+    ]);
+    deps.github.getLatestReleaseTag.mockResolvedValue("v1.1.0");
+
+    const scanner = createSubscriptionsScanner(deps);
+    const result = await scanner.runOnce();
+
+    expect(deps.resend.sendReleasesBatchEmail).not.toHaveBeenCalled();
+    expect(deps.subscriptions.updateRepoLastSeenTag).toHaveBeenCalledWith(
+      "golang/go",
+      "v1.1.0"
+    );
+    expect(result).toEqual({
+      reposChecked: 1,
+      notificationsSent: 0,
+      reposUpdated: 1,
+    });
+  });
+
   it("sends emails in chunks of 100 recipients", async () => {
     const deps = createDeps();
     deps.subscriptions.findActiveForScan.mockResolvedValue(

@@ -48,7 +48,8 @@ export interface ResendService {
   sendConfirmationEmail(
     email: string,
     token: string,
-    repo: string
+    repo: string,
+    currentReleaseTag: string | null
   ): Promise<CreateEmailResponse>;
   sendReleasesBatchEmail(
     release: SubscriptionRelease,
@@ -64,10 +65,11 @@ export function createResendService(resend: Resend): ResendService {
      * @param token - The confirmation token.
      * @returns The email send response.
      */
-    async sendConfirmationEmail(email, token, repo) {
+    async sendConfirmationEmail(email, token, repo, currentReleaseTag) {
       const html = await renderConfirmTemplate({
         confirmUrl: `${getBaseUrl()}/api/confirm/${encodeURIComponent(token)}`,
         repo,
+        currentReleaseTag: currentReleaseTag ?? "No release yet",
       });
       return resend.emails.send(createEmail(email, "Confirm your email", html));
     },

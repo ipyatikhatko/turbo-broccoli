@@ -81,6 +81,15 @@ export function createSubscriptionsScanner(deps: {
         if (!latestTag) continue;
 
         const previousTag = subscribers[0]?.lastSeenTag ?? null;
+        if (previousTag === null) {
+          await deps.subscriptions.updateRepoLastSeenTag(repo, latestTag);
+          reposUpdated += 1;
+          deps.logger.info(
+            "Initialized repo baseline tag on first observed scan",
+            { repo, tag: latestTag }
+          );
+          continue;
+        }
         if (previousTag === latestTag) continue;
 
         let sentAllForRepo = true;
