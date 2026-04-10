@@ -45,7 +45,7 @@ export function createSubscriptionRepository(db: Db): ISubscriptionRepository {
         .where(
           and(
             eq(subscriptions.email, email),
-            eq(repos.fullName, normalizedRepo),
+            eq(repos.fullName, normalizedRepo)
           )
         )
         .limit(1);
@@ -92,6 +92,19 @@ export function createSubscriptionRepository(db: Db): ISubscriptionRepository {
         .update(subscriptions)
         .set({ confirmed: true })
         .where(eq(subscriptions.confirmToken, token));
+    },
+    async findByUnsubscribeToken(token) {
+      const rows = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.unsubscribeToken, token))
+        .limit(1);
+      return rows[0] ?? null;
+    },
+    async unsubscribe(token) {
+      await db
+        .delete(subscriptions)
+        .where(eq(subscriptions.unsubscribeToken, token));
     },
   };
 }

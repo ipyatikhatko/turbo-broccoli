@@ -1,4 +1,7 @@
-import type { SubscriptionListRow, SubscriptionRow } from "../../../db/schema.ts";
+import type {
+  SubscriptionListRow,
+  SubscriptionRow,
+} from "../../../db/schema.ts";
 
 /** Ports (implementations in `adapters/github-octokit.ts`, `adapters/repository.ts`). */
 
@@ -22,5 +25,7 @@ export interface ISubscriptionRepository {
   findActiveByEmail(email: string): Promise<SubscriptionListRow[]>;
   insertPending(input: PendingSubscriptionInput): Promise<void>;
   findByConfirmToken(token: string): Promise<SubscriptionRow | null>;
+  findByUnsubscribeToken(token: string): Promise<SubscriptionRow | null>;
   confirm(token: string): Promise<void>;
+  unsubscribe(token: string): Promise<void>;
 }

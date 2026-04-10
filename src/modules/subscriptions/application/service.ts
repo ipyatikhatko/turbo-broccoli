@@ -20,7 +20,10 @@ import type {
 } from "../types.ts";
 import { isValidEmailFormat, parseOwnerRepo } from "../validation.ts";
 import type { ResendService } from "../adapters/resend.ts";
-import { ResendApiError } from "../domain/errors.ts";
+import {
+  ResendApiError,
+  SubscriptionNotConfirmedError,
+} from "../domain/errors.ts";
 
 export interface SubscriptionsService {
   subscribe(input: SubscribeBody): Promise<void>;
@@ -58,16 +61,10 @@ export function createSubscriptionsService(deps: {
       const confirmToken = randomToken();
       const unsubscribeToken = randomToken();
 
-      const latestReleaseTag = await deps.github.getLatestReleaseTag(
-        parsedSlug.owner,
-        parsedSlug.repo
-      );
-
       const email = await deps.resend.sendConfirmationEmail(
         input.email,
         confirmToken,
-        input.repo.trim(),
-        latestReleaseTag ?? "no release yet"
+        input.repo.trim()
       );
       if (email.error) throw new ResendApiError(email.error.message);
 
@@ -89,7 +86,15 @@ export function createSubscriptionsService(deps: {
       await deps.subscriptions.confirm(subscription.confirmToken);
     },
 
-    async unsubscribe(_input) {},
+    async unsubscribe(_input) {
+      const subscription = await deps.subscriptions.findByUnsubscribeToken(
+        _input.token
+      );
+      if (!subscription) throw new SubscriptionNotFoundError();
+      if (!subscription.confirmed) throw new SubscriptionNotConfirmedError();
+
+      await deps.subscriptions.unsubscribe(subscription.unsubscribeToken);
+    },
 
     async list(input) {
       const email = input.email.trim();

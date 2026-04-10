@@ -7,7 +7,6 @@ import {
 import {
   renderConfirmTemplate,
   renderReleaseTemplate,
-  renderUnsubscribeTemplate,
 } from "../../../mail/renderer.ts";
 import type { SubscriptionRelease } from "../types.ts";
 
@@ -44,17 +43,12 @@ export interface ResendService {
   sendConfirmationEmail(
     email: string,
     token: string,
-    repo: string,
-    currentReleaseTag: string
-  ): Promise<CreateEmailResponse>;
-  sendUnsubscribeEmail(
-    email: string,
-    token: string,
     repo: string
   ): Promise<CreateEmailResponse>;
   sendReleasesBatchEmail(
     emails: string[],
-    release: SubscriptionRelease
+    release: SubscriptionRelease,
+    unsubscribeToken: string
   ): Promise<CreateBatchResponse<CreateEmailResponse>>;
 }
 
@@ -66,41 +60,14 @@ export function createResendService(resend: Resend): ResendService {
      * @param token - The confirmation token.
      * @returns The email send response.
      */
-    async sendConfirmationEmail(email, token, repo, currentReleaseTag) {
+    async sendConfirmationEmail(email, token, repo) {
       const html = await renderConfirmTemplate({
         confirmUrl: `${getBaseUrl()}/api/confirm/${encodeURIComponent(token)}`,
         repo,
-        tag: currentReleaseTag,
       });
-      return resend.emails.send(
-        createEmail(
-          email,
-          "Confirm your email",
-          html
-        )
-      );
+      return resend.emails.send(createEmail(email, "Confirm your email", html));
     },
-    /**
-     * Sends a unsubscription email to a given email address with a unsubscription token.
-     * @param email - The email address to send the unsubscription email to.
-     * @param token - The unsubscribe token.
-     * @returns The email unsubscribe response.
-     */
-    async sendUnsubscribeEmail(email, token, repo) {
-      const html = await renderUnsubscribeTemplate({
-        unsubscribeUrl: `${getBaseUrl()}/api/unsubscribe/${encodeURIComponent(
-          token
-        )}`,
-        repo,
-      });
-      return resend.emails.send(
-        createEmail(
-          email,
-          "Unsubscribe from GitHub Releases",
-          html
-        )
-      );
-    },
+
     /**
      * Sends a batch email to a list of emails with the latest release for a given repository.
      * @param emails - The list of emails to send the email to.
@@ -109,20 +76,25 @@ export function createResendService(resend: Resend): ResendService {
      */
     async sendReleasesBatchEmail(
       emails: string[],
-      release: SubscriptionRelease
+      release: SubscriptionRelease,
+      unsubscribeToken: string
     ) {
       return resend.batch.send(
         await Promise.all(
           emails.map(async (email) =>
-          createEmail(
-            email,
-            "GitHub Releases",
-            await renderReleaseTemplate({
-              repo: release.repo,
-              tag: release.last_seen_tag ?? "new release detected",
-            })
+            createEmail(
+              email,
+              "GitHub Releases",
+              await renderReleaseTemplate({
+                repo: release.repo,
+                tag: release.last_seen_tag ?? "new release detected",
+                unsubscribeUrl: `${getBaseUrl()}/api/unsubscribe/${encodeURIComponent(
+                  unsubscribeToken
+                )}`,
+              })
+            )
           )
-        ))
+        )
       );
     },
   };

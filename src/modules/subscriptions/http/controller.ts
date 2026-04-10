@@ -52,6 +52,11 @@ function handleDomainError(reply: FastifyReply, err: unknown): boolean {
       reply.code(404);
       break;
     case "SUBSCRIPTION_ALREADY_CONFIRMED":
+      reply.code(400);
+      break;
+    case "SUBSCRIPTION_NOT_CONFIRMED":
+      reply.code(400);
+      break;
     case "INVALID_TOKEN":
       reply.code(400);
       break;
@@ -89,7 +94,7 @@ export function createSubscriptionsController(
     async unsubscribe(request, reply) {
       try {
         await service.unsubscribe(request.params as UnsubscribeTokenParams);
-        reply.code(501).send({ message: "Not implemented yet" });
+        reply.code(200).send();
       } catch (err) {
         if (handleDomainError(reply, err)) return;
         throw err;
