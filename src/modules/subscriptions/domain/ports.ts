@@ -17,6 +17,13 @@ export interface PendingSubscriptionInput {
   unsubscribeToken: string;
 }
 
+export interface ActiveSubscriptionScanRow {
+  email: string;
+  repo: string;
+  unsubscribeToken: string;
+  lastSeenTag: string | null;
+}
+
 export interface ISubscriptionRepository {
   findByEmailAndRepo(
     email: string,
@@ -26,6 +33,8 @@ export interface ISubscriptionRepository {
   insertPending(input: PendingSubscriptionInput): Promise<void>;
   findByConfirmToken(token: string): Promise<SubscriptionRow | null>;
   findByUnsubscribeToken(token: string): Promise<SubscriptionRow | null>;
+  findActiveForScan(): Promise<ActiveSubscriptionScanRow[]>;
   confirm(token: string): Promise<void>;
   unsubscribe(token: string): Promise<void>;
+  updateRepoLastSeenTag(repo: string, tag: string): Promise<void>;
 }

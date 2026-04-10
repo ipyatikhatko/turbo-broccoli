@@ -56,6 +56,9 @@ DATABASE_URL=postgresql://postgres:postgres@db:5432/releases
 GITHUB_TOKEN=
 RESEND_API_KEY=
 RESEND_FROM=
+SCANNER_CRON_ENABLED=false
+SCANNER_CRON_EXPRESSION=0 */5 * * * *
+SCANNER_SECRET_KEY=
 ```
 
 For deployed environments (for example app container + Railway DB), for **database connectivity** you can pass only:
@@ -79,6 +82,12 @@ Run this whenever templates under `src/mail/source/templates` change.
 - If `GITHUB_TOKEN` is set, the service uses authenticated GitHub API requests (higher rate limit).
 - If `GITHUB_TOKEN` is empty, the service uses public GitHub API requests (lower rate limit).
 - The service supports both modes without changing the API contract.
+
+Scanner behavior:
+
+- `SCANNER_CRON_ENABLED=true` enables in-process cron scanning.
+- `SCANNER_CRON_EXPRESSION` controls schedule (toad-scheduler cron format with seconds).
+- `POST /external/scan` triggers one scanner run and requires `Authorization: Bearer <SCANNER_SECRET_KEY>`.
 
 ## Run Locally
 

@@ -21,12 +21,14 @@
   "license": "ISC",
   "dependencies": {
     "@fastify/formbody": "^8.0.2",
+    "@fastify/schedule": "^6.0.0",
     "dotenv": "^17.4.1",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.8.4",
     "octokit": "^5.0.5",
     "pg": "^8.20.0",
-    "resend": "^6.10.0"
+    "resend": "^6.10.0",
+    "toad-scheduler": "^3.1.0"
   },
   "devDependencies": {
     "@maizzle/cli": "^2.0.0",

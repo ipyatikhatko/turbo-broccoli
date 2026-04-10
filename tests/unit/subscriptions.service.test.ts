@@ -24,8 +24,10 @@ describe("createSubscriptionsService", () => {
       insertPending: vi.fn().mockResolvedValue(undefined),
       findByConfirmToken: vi.fn().mockResolvedValue(null),
       findByUnsubscribeToken: vi.fn().mockResolvedValue(null),
+      findActiveForScan: vi.fn().mockResolvedValue([]),
       confirm: vi.fn().mockResolvedValue(undefined),
       unsubscribe: vi.fn().mockResolvedValue(undefined),
+      updateRepoLastSeenTag: vi.fn().mockResolvedValue(undefined),
     };
   }
 

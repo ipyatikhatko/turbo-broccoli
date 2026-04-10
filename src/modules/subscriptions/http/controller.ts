@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { isSubscriptionDomainError } from "../domain/index.ts";
+import type { SubscriptionsScanner } from "../application/scanner.ts";
 import type { SubscriptionsService } from "../application/service.ts";
 import type {
   SubscribeBody,
@@ -26,6 +27,10 @@ export interface SubscriptionsController {
     request: FastifyRequest<{ Querystring: SubscriptionsQuery }>,
     reply: FastifyReply
   ): Promise<void>;
+}
+
+export interface ScannerController {
+  scan(request: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 
 function handleDomainError(reply: FastifyReply, err: unknown): boolean {
@@ -67,6 +72,37 @@ function handleDomainError(reply: FastifyReply, err: unknown): boolean {
 
   reply.send(errorResponse);
   return true;
+}
+
+function parseBearerToken(header: string | undefined): string {
+  if (!header?.startsWith("Bearer ")) return "";
+  return header.slice("Bearer ".length).trim();
+}
+
+export function createScannerController(
+  scanner: SubscriptionsScanner,
+  externalToken: string | undefined
+): ScannerController {
+  return {
+    async scan(request, reply) {
+      if (!externalToken) {
+        reply.code(503).send({
+          code: "SCANNER_TOKEN_NOT_CONFIGURED",
+          message: "Scanner external token is not configured",
+        });
+        return;
+      }
+
+      const provided = parseBearerToken(request.headers.authorization);
+      if (!provided || provided !== externalToken) {
+        reply.code(401).send({ code: "UNAUTHORIZED", message: "Unauthorized" });
+        return;
+      }
+
+      const result = await scanner.runOnce();
+      reply.code(200).send(result);
+    },
+  };
 }
 
 export function createSubscriptionsController(

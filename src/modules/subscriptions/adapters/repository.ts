@@ -101,10 +101,28 @@ export function createSubscriptionRepository(db: Db): ISubscriptionRepository {
         .limit(1);
       return rows[0] ?? null;
     },
+    async findActiveForScan() {
+      return db
+        .select({
+          email: subscriptions.email,
+          repo: repos.fullName,
+          unsubscribeToken: subscriptions.unsubscribeToken,
+          lastSeenTag: repos.lastSeenTag,
+        })
+        .from(subscriptions)
+        .innerJoin(repos, eq(subscriptions.repoId, repos.id))
+        .where(eq(subscriptions.confirmed, true));
+    },
     async unsubscribe(token) {
       await db
         .delete(subscriptions)
         .where(eq(subscriptions.unsubscribeToken, token));
+    },
+    async updateRepoLastSeenTag(repo, tag) {
+      await db
+        .update(repos)
+        .set({ lastSeenTag: tag, updatedAt: new Date() })
+        .where(eq(repos.fullName, repo));
     },
   };
 }

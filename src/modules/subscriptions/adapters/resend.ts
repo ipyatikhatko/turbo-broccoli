@@ -39,6 +39,11 @@ function getBaseUrl(): string {
   return BASE_URL.replace(/\/+$/, "");
 }
 
+export interface ReleaseRecipient {
+  email: string;
+  unsubscribeToken: string;
+}
+
 export interface ResendService {
   sendConfirmationEmail(
     email: string,
@@ -46,9 +51,8 @@ export interface ResendService {
     repo: string
   ): Promise<CreateEmailResponse>;
   sendReleasesBatchEmail(
-    emails: string[],
     release: SubscriptionRelease,
-    unsubscribeToken: string
+    recipients: ReleaseRecipient[]
   ): Promise<CreateBatchResponse<CreateEmailResponse>>;
 }
 
@@ -70,26 +74,22 @@ export function createResendService(resend: Resend): ResendService {
 
     /**
      * Sends a batch email to a list of emails with the latest release for a given repository.
-     * @param emails - The list of emails to send the email to.
      * @param release - The latest release for the repository.
+     * @param recipients - Recipients with per-user unsubscribe tokens.
      * @returns The batch send response.
      */
-    async sendReleasesBatchEmail(
-      emails: string[],
-      release: SubscriptionRelease,
-      unsubscribeToken: string
-    ) {
+    async sendReleasesBatchEmail(release, recipients) {
       return resend.batch.send(
         await Promise.all(
-          emails.map(async (email) =>
+          recipients.map(async (recipient) =>
             createEmail(
-              email,
+              recipient.email,
               "GitHub Releases",
               await renderReleaseTemplate({
                 repo: release.repo,
                 tag: release.last_seen_tag ?? "new release detected",
                 unsubscribeUrl: `${getBaseUrl()}/api/unsubscribe/${encodeURIComponent(
-                  unsubscribeToken
+                  recipient.unsubscribeToken
                 )}`,
               })
             )
