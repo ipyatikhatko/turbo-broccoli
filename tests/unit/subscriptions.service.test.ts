@@ -23,7 +23,9 @@ describe("createSubscriptionsService", () => {
       findActiveByEmail: vi.fn().mockResolvedValue([]),
       insertPending: vi.fn().mockResolvedValue(undefined),
       findByConfirmToken: vi.fn().mockResolvedValue(null),
+      findByUnsubscribeToken: vi.fn().mockResolvedValue(null),
       confirm: vi.fn().mockResolvedValue(undefined),
+      unsubscribe: vi.fn().mockResolvedValue(undefined),
     };
   }
 
@@ -48,8 +50,7 @@ describe("createSubscriptionsService", () => {
     expect(resend.sendConfirmationEmail).toHaveBeenCalledWith(
       "a@example.com",
       expect.any(String),
-      "golang/go",
-      "v1.2.3"
+      "golang/go"
     );
     expect(subscriptions.insertPending).toHaveBeenCalledTimes(1);
     expect(subscriptions.insertPending.mock.calls[0]?.[0]).toMatchObject({
@@ -213,5 +214,131 @@ describe("createSubscriptionsService", () => {
       code: "SUBSCRIPTION_ALREADY_CONFIRMED",
     });
     expect(subscriptions.confirm).not.toHaveBeenCalled();
+  });
+
+  it("unsubscribe removes confirmed subscription by unsubscribe token", async () => {
+    const subscriptions = createRepositoryMock();
+    subscriptions.findByUnsubscribeToken.mockResolvedValue({
+      id: "sub-id",
+      email: "a@example.com",
+      repoId: "repo-id",
+      confirmed: true,
+      confirmToken: "confirm-token",
+      unsubscribeToken: "unsubscribe-token",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
+      subscriptions,
+      resend: createResendMock(),
+    });
+
+    await service.unsubscribe({ token: "unsubscribe-token" });
+    expect(subscriptions.unsubscribe).toHaveBeenCalledWith("unsubscribe-token");
+  });
+
+  it("unsubscribe throws SubscriptionNotFoundError for unknown token", async () => {
+    const subscriptions = createRepositoryMock();
+    subscriptions.findByUnsubscribeToken.mockResolvedValue(null);
+
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
+      subscriptions,
+      resend: createResendMock(),
+    });
+
+    await expect(service.unsubscribe({ token: "missing" })).rejects.toMatchObject(
+      {
+        code: "SUBSCRIPTION_NOT_FOUND",
+      }
+    );
+    expect(subscriptions.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it("unsubscribe throws SubscriptionNotConfirmedError for pending subscription", async () => {
+    const subscriptions = createRepositoryMock();
+    subscriptions.findByUnsubscribeToken.mockResolvedValue({
+      id: "sub-id",
+      email: "a@example.com",
+      repoId: "repo-id",
+      confirmed: false,
+      confirmToken: "confirm-token",
+      unsubscribeToken: "unsubscribe-token",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
+      subscriptions,
+      resend: createResendMock(),
+    });
+
+    await expect(
+      service.unsubscribe({ token: "unsubscribe-token" })
+    ).rejects.toMatchObject({
+      code: "SUBSCRIPTION_NOT_CONFIRMED",
+    });
+    expect(subscriptions.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it("list throws InvalidEmailError for invalid email", async () => {
+    const subscriptions = createRepositoryMock();
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
+      subscriptions,
+      resend: createResendMock(),
+    });
+
+    await expect(service.list({ email: "not-an-email" })).rejects.toMatchObject({
+      code: "INVALID_EMAIL",
+    });
+    expect(subscriptions.findActiveByEmail).not.toHaveBeenCalled();
+  });
+
+  it("list returns mapped subscriptions for valid email", async () => {
+    const subscriptions = createRepositoryMock();
+    subscriptions.findActiveByEmail.mockResolvedValue([
+      {
+        email: "a@example.com",
+        repo: "golang/go",
+        confirmed: true,
+        lastSeenTag: "v1.2.3",
+      },
+    ]);
+
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn(),
+      },
+      subscriptions,
+      resend: createResendMock(),
+    });
+
+    const result = await service.list({ email: "a@example.com" });
+    expect(subscriptions.findActiveByEmail).toHaveBeenCalledWith("a@example.com");
+    expect(result).toEqual([
+      {
+        email: "a@example.com",
+        repo: "golang/go",
+        confirmed: true,
+        last_seen_tag: "v1.2.3",
+      },
+    ]);
   });
 });
