@@ -39,28 +39,12 @@ function replaceAll(html: string, values: Record<string, string>): string {
 export async function renderConfirmTemplate(input: {
   confirmUrl: string;
   repo: string;
-  tag: string;
 }): Promise<string> {
   const html = await readTemplate("emails/confirm.html");
   return replaceAll(html, {
     "{{ confirmUrl }}": input.confirmUrl,
     "{{ repo }}": input.repo,
-    "{{ tag }}": input.tag,
     "{{ page.confirmUrl }}": input.confirmUrl,
-    "{{ page.repo }}": input.repo,
-    "{{ page.tag }}": input.tag,
-  });
-}
-
-export async function renderUnsubscribeTemplate(input: {
-  unsubscribeUrl: string;
-  repo: string;
-}): Promise<string> {
-  const html = await readTemplate("emails/unsubscribe.html");
-  return replaceAll(html, {
-    "{{ unsubscribeUrl }}": input.unsubscribeUrl,
-    "{{ repo }}": input.repo,
-    "{{ page.unsubscribeUrl }}": input.unsubscribeUrl,
     "{{ page.repo }}": input.repo,
   });
 }
@@ -68,12 +52,12 @@ export async function renderUnsubscribeTemplate(input: {
 export async function renderReleaseTemplate(input: {
   repo: string;
   tag: string;
+  unsubscribeUrl: string;
 }): Promise<string> {
   const html = await readTemplate("emails/release.html");
   return replaceAll(html, {
     "{{ repo }}": input.repo,
     "{{ tag }}": input.tag,
-    "{{ page.repo }}": input.repo,
-    "{{ page.tag }}": input.tag,
+    "{{ unsubscribeUrl }}": input.unsubscribeUrl,
   });
 }

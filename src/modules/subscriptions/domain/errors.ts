@@ -1,5 +1,6 @@
 /** Domain errors mapped to HTTP status in the controller. */
 
+/** Base domain error and response shape. */
 export class SubscriptionDomainError extends Error {
   readonly code: string;
   readonly message: string;
@@ -17,27 +18,10 @@ export class SubscriptionDomainError extends Error {
   }
 }
 
+/** GitHub-related domain errors. */
 export class GithubRepoNotFoundError extends SubscriptionDomainError {
   constructor() {
     super("GITHUB_REPO_NOT_FOUND", "Repository not found on GitHub");
-  }
-}
-
-export class SubscriptionConflictError extends SubscriptionDomainError {
-  constructor() {
-    super(
-      "SUBSCRIPTION_CONFLICT",
-      "Email already subscribed to this repository"
-    );
-  }
-}
-
-export class InvalidRepoFormatError extends SubscriptionDomainError {
-  constructor() {
-    super(
-      "INVALID_REPO_FORMAT",
-      "Invalid repository format (expected owner/repo)"
-    );
   }
 }
 
@@ -47,9 +31,13 @@ export class GithubRateLimitedError extends SubscriptionDomainError {
   }
 }
 
-export class InvalidEmailError extends SubscriptionDomainError {
+/** Subscription state and lifecycle errors. */
+export class SubscriptionConflictError extends SubscriptionDomainError {
   constructor() {
-    super("INVALID_EMAIL", "Invalid email");
+    super(
+      "SUBSCRIPTION_CONFLICT",
+      "Email already subscribed to this repository"
+    );
   }
 }
 
@@ -65,18 +53,42 @@ export class SubscriptionAlreadyConfirmedError extends SubscriptionDomainError {
   }
 }
 
+export class SubscriptionNotConfirmedError extends SubscriptionDomainError {
+  constructor() {
+    super("SUBSCRIPTION_NOT_CONFIRMED", "Subscription not confirmed");
+  }
+}
+
+/** Input and token validation errors. */
+export class InvalidRepoFormatError extends SubscriptionDomainError {
+  constructor() {
+    super(
+      "INVALID_REPO_FORMAT",
+      "Invalid repository format (expected owner/repo)"
+    );
+  }
+}
+
+export class InvalidEmailError extends SubscriptionDomainError {
+  constructor() {
+    super("INVALID_EMAIL", "Invalid email");
+  }
+}
+
 export class InvalidTokenError extends SubscriptionDomainError {
   constructor() {
     super("INVALID_TOKEN", "Invalid token");
   }
 }
 
+/** External integration errors. */
 export class ResendApiError extends SubscriptionDomainError {
   constructor(message = "Resend API error") {
     super("RESEND_API_ERROR", message);
   }
 }
 
+/** Type guard for controller-level error mapping. */
 export function isSubscriptionDomainError(
   err: unknown
 ): err is
@@ -88,7 +100,9 @@ export function isSubscriptionDomainError(
   | SubscriptionNotFoundError
   | SubscriptionAlreadyConfirmedError
   | InvalidTokenError
-  | ResendApiError {
+  | ResendApiError
+  | SubscriptionNotConfirmedError
+  {
   return (
     err instanceof InvalidRepoFormatError ||
     err instanceof GithubRepoNotFoundError ||
@@ -98,6 +112,7 @@ export function isSubscriptionDomainError(
     err instanceof SubscriptionNotFoundError ||
     err instanceof SubscriptionAlreadyConfirmedError ||
     err instanceof InvalidTokenError ||
-    err instanceof ResendApiError
+    err instanceof ResendApiError ||
+    err instanceof SubscriptionNotConfirmedError
   );
 }
