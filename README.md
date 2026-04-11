@@ -87,7 +87,7 @@ Scanner behavior:
 
 - `SCANNER_CRON_ENABLED=true` enables in-process cron scanning.
 - `SCANNER_CRON_EXPRESSION` controls schedule (toad-scheduler cron format with seconds).
-- `POST /external/scan` triggers one scanner run and requires `Authorization: Bearer <SCANNER_SECRET_KEY>`.
+- `POST /external/scan` triggers one scanner run and requires header `X-Scanner-Key: <SCANNER_SECRET_KEY>` (so Cloud Scheduler can use OIDC on `Authorization` for Cloud Run while sending the app secret separately).
 
 ## Run Locally
 

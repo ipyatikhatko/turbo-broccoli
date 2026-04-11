@@ -74,9 +74,12 @@ function handleDomainError(reply: FastifyReply, err: unknown): boolean {
   return true;
 }
 
-function parseBearerToken(header: string | undefined): string {
-  if (!header?.startsWith("Bearer ")) return "";
-  return header.slice("Bearer ".length).trim();
+function readScannerKeyHeader(
+  headers: FastifyRequest["headers"]
+): string {
+  const raw = headers["x-scanner-key"];
+  if (raw === undefined) return "";
+  return Array.isArray(raw) ? raw[0]?.trim() ?? "" : raw.trim();
 }
 
 export function createScannerController(
@@ -93,7 +96,7 @@ export function createScannerController(
         return;
       }
 
-      const provided = parseBearerToken(request.headers.authorization);
+      const provided = readScannerKeyHeader(request.headers);
       if (!provided || provided !== externalToken) {
         reply.code(401).send({ code: "UNAUTHORIZED", message: "Unauthorized" });
         return;
