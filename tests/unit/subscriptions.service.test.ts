@@ -24,8 +24,10 @@ describe("createSubscriptionsService", () => {
       insertPending: vi.fn().mockResolvedValue(undefined),
       findByConfirmToken: vi.fn().mockResolvedValue(null),
       findByUnsubscribeToken: vi.fn().mockResolvedValue(null),
+      findActiveForScan: vi.fn().mockResolvedValue([]),
       confirm: vi.fn().mockResolvedValue(undefined),
       unsubscribe: vi.fn().mockResolvedValue(undefined),
+      updateRepoLastSeenTag: vi.fn().mockResolvedValue(undefined),
     };
   }
 
@@ -50,7 +52,8 @@ describe("createSubscriptionsService", () => {
     expect(resend.sendConfirmationEmail).toHaveBeenCalledWith(
       "a@example.com",
       expect.any(String),
-      "golang/go"
+      "golang/go",
+      "v1.2.3"
     );
     expect(subscriptions.insertPending).toHaveBeenCalledTimes(1);
     expect(subscriptions.insertPending.mock.calls[0]?.[0]).toMatchObject({
@@ -140,6 +143,32 @@ describe("createSubscriptionsService", () => {
       service.subscribe({ email: "a@example.com", repo: "golang/go" })
     ).rejects.toMatchObject({ code: "RESEND_API_ERROR" });
     expect(subscriptions.insertPending).not.toHaveBeenCalled();
+  });
+
+  it("subscribe passes fallback release context when repo has no releases", async () => {
+    const subscriptions = createRepositoryMock();
+    const resend = createResendMock();
+
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn().mockResolvedValue(null),
+      },
+      subscriptions,
+      resend,
+    });
+
+    await service.subscribe({
+      email: "a@example.com",
+      repo: "golang/go",
+    });
+
+    expect(resend.sendConfirmationEmail).toHaveBeenCalledWith(
+      "a@example.com",
+      expect.any(String),
+      "golang/go",
+      null
+    );
   });
 
   it("confirm marks pending subscription as confirmed", async () => {

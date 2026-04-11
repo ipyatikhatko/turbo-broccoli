@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import formbody from "@fastify/formbody";
+import { fastifySchedule } from "@fastify/schedule";
 
 import { connectAndMigrate } from "@/db/index.ts";
 import { subscriptionsRoutes } from "@/modules/subscriptions/index.ts";
@@ -22,6 +23,7 @@ fastify.addHook("onClose", async () => {
 });
 
 await fastify.register(formbody);
+await fastify.register(fastifySchedule);
 await fastify.register(subscriptionsRoutes);
 
 const start = async () => {

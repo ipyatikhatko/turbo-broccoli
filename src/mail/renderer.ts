@@ -39,13 +39,16 @@ function replaceAll(html: string, values: Record<string, string>): string {
 export async function renderConfirmTemplate(input: {
   confirmUrl: string;
   repo: string;
+  currentReleaseTag: string;
 }): Promise<string> {
   const html = await readTemplate("emails/confirm.html");
   return replaceAll(html, {
     "{{ confirmUrl }}": input.confirmUrl,
     "{{ repo }}": input.repo,
+    "{{ currentReleaseTag }}": input.currentReleaseTag,
     "{{ page.confirmUrl }}": input.confirmUrl,
     "{{ page.repo }}": input.repo,
+    "{{ page.currentReleaseTag }}": input.currentReleaseTag,
   });
 }
 
