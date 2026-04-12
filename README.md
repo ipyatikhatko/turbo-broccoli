@@ -165,7 +165,7 @@ docker compose up --build
 
 Then open **`http://localhost:${PORT:-3000}/subscribe`**. **`BASE_URL=http://localhost:3000`** (and optional empty **`WEB_URL`**) matches the published port; no subdomain setup is required for routing.
 
-**Environment:** Compose reads `.env` for variable substitution. The `api` service gets `DATABASE_URL` pointed at the `db` container automatically.
+**Environment:** Compose reads `.env` for variable substitution. The `api` service gets `DATABASE_URL` pointed at the `db` container automatically, and passes through **`SCANNER_SECRET_KEY`**, **`SCANNER_CRON_ENABLED`**, and **`SCANNER_CRON_EXPRESSION`** (set **`SCANNER_SECRET_KEY`** if you call **`POST /external/scan`** with **`X-Scanner-Key`**).
 
 This stack is intended primarily for local development. Production on GCP is: image in **Artifact Registry**, runtime on **Cloud Run**, database on **Cloud SQL** (or another managed Postgres).
 
