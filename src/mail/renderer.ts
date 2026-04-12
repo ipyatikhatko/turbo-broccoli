@@ -39,16 +39,22 @@ function replaceAll(html: string, values: Record<string, string>): string {
 export async function renderConfirmTemplate(input: {
   confirmUrl: string;
   repo: string;
-  currentReleaseTag: string;
+  currentReleaseTag: string | null;
 }): Promise<string> {
   const html = await readTemplate("emails/confirm.html");
+  const currentReleaseTagHref = input.currentReleaseTag
+    ? `https://github.com/${input.repo}/releases/${input.currentReleaseTag}`
+    : `https://github.com/${input.repo}/releases`;
+  const currentReleaseTagText = input.currentReleaseTag ?? "No releases yet";
   return replaceAll(html, {
     "{{ confirmUrl }}": input.confirmUrl,
     "{{ repo }}": input.repo,
-    "{{ currentReleaseTag }}": input.currentReleaseTag,
+    "{{ currentReleaseTagHref }}": currentReleaseTagHref,
+    "{{ currentReleaseTagText }}": currentReleaseTagText,
     "{{ page.confirmUrl }}": input.confirmUrl,
     "{{ page.repo }}": input.repo,
-    "{{ page.currentReleaseTag }}": input.currentReleaseTag,
+    "{{ page.currentReleaseTagHref }}": currentReleaseTagHref,
+    "{{ page.currentReleaseTagText }}": currentReleaseTagText,
   });
 }
 

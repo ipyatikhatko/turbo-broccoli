@@ -8,7 +8,6 @@ import {
   renderConfirmTemplate,
   renderReleaseTemplate,
 } from "../../../mail/renderer.ts";
-import type { SubscriptionRelease } from "../types.ts";
 
 const RESEND_FROM = process.env.RESEND_FROM;
 const BASE_URL = process.env.BASE_URL;
@@ -59,7 +58,7 @@ export interface ResendService {
     currentReleaseTag: string | null
   ): Promise<CreateEmailResponse>;
   sendReleasesBatchEmail(
-    release: SubscriptionRelease,
+    release: { repo: string; tag: string },
     recipients: ReleaseRecipient[]
   ): Promise<CreateBatchResponse<CreateEmailResponse>>;
 }
@@ -76,17 +75,11 @@ export function createResendService(resend: Resend): ResendService {
       const html = await renderConfirmTemplate({
         confirmUrl: `${getEmailActionOrigin()}/confirm/${encodeURIComponent(token)}`,
         repo,
-        currentReleaseTag: currentReleaseTag ?? "No release yet",
+        currentReleaseTag,
       });
       return resend.emails.send(createEmail(email, "Confirm your email", html));
     },
 
-    /**
-     * Sends a batch email to a list of emails with the latest release for a given repository.
-     * @param release - The latest release for the repository.
-     * @param recipients - Recipients with per-user unsubscribe tokens.
-     * @returns The batch send response.
-     */
     async sendReleasesBatchEmail(release, recipients) {
       return resend.batch.send(
         await Promise.all(
@@ -96,7 +89,7 @@ export function createResendService(resend: Resend): ResendService {
               "GitHub Releases",
               await renderReleaseTemplate({
                 repo: release.repo,
-                tag: release.last_seen_tag ?? "new release detected",
+                tag: release.tag,
                 unsubscribeUrl: `${getEmailActionOrigin()}/unsubscribe/${encodeURIComponent(
                   recipient.unsubscribeToken
                 )}`,

@@ -18,10 +18,11 @@ export interface PendingSubscriptionInput {
 }
 
 export interface ActiveSubscriptionScanRow {
+  subscriptionId: string;
   email: string;
   repo: string;
   unsubscribeToken: string;
-  lastSeenTag: string | null;
+  lastNotifiedTag: string | null;
 }
 
 export interface ISubscriptionRepository {
@@ -31,10 +32,21 @@ export interface ISubscriptionRepository {
   ): Promise<SubscriptionRow | null>;
   findActiveByEmail(email: string): Promise<SubscriptionListRow[]>;
   insertPending(input: PendingSubscriptionInput): Promise<void>;
-  findByConfirmToken(token: string): Promise<SubscriptionRow | null>;
+  findPendingWithRepoByConfirmToken(token: string): Promise<{
+    subscription: SubscriptionRow;
+    repoFullName: string;
+  } | null>;
   findByUnsubscribeToken(token: string): Promise<SubscriptionRow | null>;
   findActiveForScan(): Promise<ActiveSubscriptionScanRow[]>;
-  confirm(token: string): Promise<void>;
+  confirmAndSetLastNotifiedTag(
+    confirmToken: string,
+    lastNotifiedTag: string | null
+  ): Promise<void>;
+  /** Removes a pending (unconfirmed) row by its confirm token. Used to roll back after email send failure. */
+  deletePendingByConfirmToken(confirmToken: string): Promise<void>;
   unsubscribe(token: string): Promise<void>;
-  updateRepoLastSeenTag(repo: string, tag: string): Promise<void>;
+  updateLastNotifiedTagForSubscriptionIds(
+    ids: string[],
+    tag: string
+  ): Promise<void>;
 }
