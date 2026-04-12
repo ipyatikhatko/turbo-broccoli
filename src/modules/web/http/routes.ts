@@ -6,7 +6,7 @@ import {
   subscribePageHtml,
   subscriptionConfirmedPageHtml,
   unsubscribedPageHtml,
-} from "../html/public-pages.ts";
+} from "../html/index.ts";
 
 export const publicWebRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/", async (_request, reply) => {
@@ -18,7 +18,9 @@ export const publicWebRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get("/subscription-confirmed", async (_request, reply) => {
-    reply.type("text/html; charset=utf-8").send(subscriptionConfirmedPageHtml());
+    reply
+      .type("text/html; charset=utf-8")
+      .send(subscriptionConfirmedPageHtml());
   });
 
   fastify.get("/unsubscribed", async (_request, reply) => {
@@ -33,9 +35,6 @@ export const publicWebRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.setNotFoundHandler(async (_request, reply) => {
-    reply
-      .code(404)
-      .type("text/html; charset=utf-8")
-      .send(notFoundPageHtml());
+    reply.code(404).type("text/html; charset=utf-8").send(notFoundPageHtml());
   });
 };
