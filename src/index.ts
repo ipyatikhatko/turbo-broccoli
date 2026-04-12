@@ -17,6 +17,11 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is required");
 }
 
+const baseUrl = process.env.BASE_URL?.trim();
+if (!baseUrl) {
+  throw new Error("BASE_URL is required");
+}
+
 const { db, pool } = await connectAndMigrate(databaseUrl);
 
 const fastify = Fastify({

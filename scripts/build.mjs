@@ -25,8 +25,7 @@ const aliasAtPlugin = {
 await mkdir(publicDir, { recursive: true });
 
 const tw = spawnSync(
-  "pnpm",
-  ["exec", "tailwindcss", "-i", "./src/web/input.css", "-o", "./dist/public/web.css", "--minify"],
+  "pnpm exec tailwindcss -i ./src/web/input.css -o ./dist/public/web.css --minify",
   { cwd: root, stdio: "inherit", shell: true }
 );
 if (tw.status !== 0) {
