@@ -39,6 +39,13 @@ function getBaseUrl(): string {
   return BASE_URL.replace(/\/+$/, "");
 }
 
+/** Human-facing links (confirm / unsubscribe) should hit the **web** host when split. */
+function getEmailActionOrigin(): string {
+  const web = process.env.WEB_URL?.trim();
+  if (web) return web.replace(/\/+$/, "");
+  return getBaseUrl();
+}
+
 export interface ReleaseRecipient {
   email: string;
   unsubscribeToken: string;
@@ -67,7 +74,7 @@ export function createResendService(resend: Resend): ResendService {
      */
     async sendConfirmationEmail(email, token, repo, currentReleaseTag) {
       const html = await renderConfirmTemplate({
-        confirmUrl: `${getBaseUrl()}/api/confirm/${encodeURIComponent(token)}`,
+        confirmUrl: `${getEmailActionOrigin()}/api/confirm/${encodeURIComponent(token)}`,
         repo,
         currentReleaseTag: currentReleaseTag ?? "No release yet",
       });
@@ -90,7 +97,7 @@ export function createResendService(resend: Resend): ResendService {
               await renderReleaseTemplate({
                 repo: release.repo,
                 tag: release.last_seen_tag ?? "new release detected",
-                unsubscribeUrl: `${getBaseUrl()}/api/unsubscribe/${encodeURIComponent(
+                unsubscribeUrl: `${getEmailActionOrigin()}/api/unsubscribe/${encodeURIComponent(
                   recipient.unsubscribeToken
                 )}`,
               })

@@ -11,6 +11,15 @@ OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.
 - `GET /api/unsubscribe/{token}` - unsubscribe by token
 - `GET /api/subscriptions?email={email}` - list active subscriptions for an email
 
+## Public pages (MVC + HTMX)
+
+- `GET /subscribe` - subscription form (HTMX posts to the **API origin** when it differs from the app host; see below)
+- `GET /subscription-confirmed` - success view after email confirmation (browser redirect target)
+- `GET /unsubscribed` - success view after unsubscribe
+- `GET /error?context=&code=` - human-readable error view
+
+Static CSS: `/assets/web.css` (built with Tailwind; run `pnpm build` or `pnpm web:css`).
+
 ## Stack
 
 - Runtime: Node.js
@@ -21,6 +30,7 @@ OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.
 - Database: PostgreSQL
 - ORM: Drizzle ORM + Drizzle Kit migrations
 - Email templates: Maizzle + Tailwind (compiled to `src/mail/compiled`)
+- Public UI: HTMX + Tailwind (`pnpm web:css` / `pnpm build` → `dist/public/web.css`)
 - Email service: Resend (token is needed for sending emails)
 - Containerization: Docker + Docker Compose (local/dev)
 - Testing: Vitest
@@ -51,7 +61,8 @@ Use `.env`:
 
 ```env
 PORT=3000
-BASE_URL=http://localhost:3000
+BASE_URL=http://api.localhost:3000
+WEB_URL=http://app.localhost:3000
 DATABASE_URL=postgresql://postgres:postgres@db:5432/releases
 GITHUB_TOKEN=
 RESEND_API_KEY=
@@ -60,6 +71,24 @@ SCANNER_CRON_ENABLED=false
 SCANNER_CRON_EXPRESSION=0 */5 * * * *
 SCANNER_SECRET_KEY=
 ```
+
+- **`BASE_URL`**: Public origin of the **API** host (JSON contract). Required for Resend when `WEB_URL` is not set; used together with `WEB_URL` for split-host setups. Example: `https://api.example.com`.
+- **`WEB_URL`**: Public origin of the **web** host (pages + HTML responses for the same routes). If set, confirmation and unsubscribe links in emails point here so users open links on the app host. If omitted, everything uses **`BASE_URL`** (single host).
+
+### API host vs app host (how responses are chosen)
+
+The server inspects the HTTP **`Host`** header (or **`X-Forwarded-Host`** when behind a proxy). No User-Agent lists are used.
+
+| Host | Behavior for `/api/subscribe`, `/api/confirm/:token`, `/api/unsubscribe/:token` |
+|------|-------------------------------------------------------------------------------------|
+| **`app.*`** subdomain (e.g. `app.localhost`, `app.example.com`) **or** hostname equal to `WEB_URL` | Web UX: **302** redirects to `/subscription-confirmed`, `/unsubscribed`, or `/error?…`; **`POST /api/subscribe`** with **`HX-Request: true`** returns **HTML** fragments. |
+| **Everything else** (including **`api.*`**, bare `localhost`, unknown host) | **OpenAPI JSON** contract: empty `200` or `{ code, message }` errors. |
+
+Override on any host: append **`?format=json`** to force JSON (useful when debugging against the app hostname).
+
+**Email links:** When `WEB_URL` is set, confirm/unsubscribe URLs use **`WEB_URL`** so recipients hit the app host and get redirects/HTML. Programmatic clients should call **`BASE_URL`** (the API host).
+
+**Split origins and HTMX:** If `WEB_URL` and `BASE_URL` differ, the subscribe page posts to the API origin and the app registers **CORS** for both origins. For local subdomains, see **Local subdomains** below.
 
 For deployed environments (for example app container + Railway DB), for **database connectivity** you can pass only:
 
@@ -101,6 +130,20 @@ PostgreSQL must be reachable at `DATABASE_URL` before starting the app (migratio
 ```bash
 pnpm dev
 ```
+
+### Local subdomains (`api.localhost` / `app.localhost`)
+
+To mirror production (API on one host, app on another) with one process:
+
+1. Point **`BASE_URL`** at the API origin and **`WEB_URL`** at the app origin (see `.env.example`).
+2. Many systems resolve `*.localhost` to `127.0.0.1` automatically. If `ping app.localhost` fails, add hosts entries:
+   ```bash
+   pnpm local:subdomains
+   ```
+   The script prints the exact `sudo tee -a /etc/hosts` line to run.
+3. Open **`WEB_URL`** in the browser (e.g. `http://app.localhost:3000/subscribe`). Use **`BASE_URL`** for curl, Postman, and OpenAPI clients (e.g. `http://api.localhost:3000/api/subscriptions?email=…`).
+
+For a **single host** only, set both to the same origin (e.g. `http://localhost:3000`) and leave **`WEB_URL`** empty or equal to **`BASE_URL`**; the host will not match `app.*`, so responses stay JSON unless you use a hostname that matches **`WEB_URL`**.
 
 ### Build and Start
 

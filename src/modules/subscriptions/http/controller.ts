@@ -9,6 +9,13 @@ import type {
   TokenParams,
   UnsubscribeTokenParams,
 } from "../types.ts";
+import { isHtmxWebSubscribe, isWebDocumentClient } from "./client-kind.ts";
+import {
+  subscribeErrorFragment,
+  subscribeSuccessFragment,
+  subscribeUnexpectedErrorFragment,
+} from "@/modules/web/http/subscribe-fragments.ts";
+import { resolveWebAppOrigin } from "@/modules/web/env.ts";
 
 export interface SubscriptionsController {
   subscribe(
@@ -33,11 +40,8 @@ export interface ScannerController {
   scan(request: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 
-function handleDomainError(reply: FastifyReply, err: unknown): boolean {
-  if (!isSubscriptionDomainError(err)) return false;
-  const errorResponse = err.toResponse();
-
-  switch (err.code) {
+function setDomainErrorHttpStatus(reply: FastifyReply, code: string): void {
+  switch (code) {
     case "INVALID_REPO_FORMAT":
       reply.code(400);
       break;
@@ -69,7 +73,12 @@ function handleDomainError(reply: FastifyReply, err: unknown): boolean {
       reply.code(500);
       break;
   }
+}
 
+function handleDomainError(reply: FastifyReply, err: unknown): boolean {
+  if (!isSubscriptionDomainError(err)) return false;
+  const errorResponse = err.toResponse();
+  setDomainErrorHttpStatus(reply, err.code);
   reply.send(errorResponse);
   return true;
 }
@@ -113,28 +122,75 @@ export function createSubscriptionsController(
 ): SubscriptionsController {
   return {
     async subscribe(request, reply) {
+      const htmx = isHtmxWebSubscribe(request);
       try {
         await service.subscribe(request.body as SubscribeBody);
+        if (htmx) {
+          reply
+            .code(200)
+            .type("text/html; charset=utf-8")
+            .send(subscribeSuccessFragment());
+          return;
+        }
         reply.code(200).send();
       } catch (err) {
+        if (htmx) {
+          const fragment = subscribeErrorFragment(err);
+          if (fragment && isSubscriptionDomainError(err)) {
+            setDomainErrorHttpStatus(reply, err.code);
+            reply.type("text/html; charset=utf-8").send(fragment);
+            return;
+          }
+          reply
+            .code(500)
+            .type("text/html; charset=utf-8")
+            .send(subscribeUnexpectedErrorFragment());
+          return;
+        }
         if (handleDomainError(reply, err)) return;
         throw err;
       }
     },
     async confirm(request, reply) {
+      const web = isWebDocumentClient(request);
       try {
         await service.confirm(request.params as TokenParams);
+        if (web) {
+          const origin = resolveWebAppOrigin();
+          reply.redirect(`${origin}/subscription-confirmed`);
+          return;
+        }
         reply.code(200).send();
       } catch (err) {
+        if (web && isSubscriptionDomainError(err)) {
+          const origin = resolveWebAppOrigin();
+          const u = new URL(`${origin}/error`);
+          u.searchParams.set("code", err.code);
+          reply.redirect(u.toString());
+          return;
+        }
         if (handleDomainError(reply, err)) return;
         throw err;
       }
     },
     async unsubscribe(request, reply) {
+      const web = isWebDocumentClient(request);
       try {
         await service.unsubscribe(request.params as UnsubscribeTokenParams);
+        if (web) {
+          const origin = resolveWebAppOrigin();
+          reply.redirect(`${origin}/unsubscribed`);
+          return;
+        }
         reply.code(200).send();
       } catch (err) {
+        if (web && isSubscriptionDomainError(err)) {
+          const origin = resolveWebAppOrigin();
+          const u = new URL(`${origin}/error`);
+          u.searchParams.set("code", err.code);
+          reply.redirect(u.toString());
+          return;
+        }
         if (handleDomainError(reply, err)) return;
         throw err;
       }
