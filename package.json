@@ -23,7 +23,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fastify/cors": "^11.2.0",
     "@fastify/formbody": "^8.0.2",
     "@fastify/schedule": "^6.0.0",
     "@fastify/static": "^9.1.0",

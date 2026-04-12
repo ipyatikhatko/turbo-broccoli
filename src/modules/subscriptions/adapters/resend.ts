@@ -74,7 +74,7 @@ export function createResendService(resend: Resend): ResendService {
      */
     async sendConfirmationEmail(email, token, repo, currentReleaseTag) {
       const html = await renderConfirmTemplate({
-        confirmUrl: `${getEmailActionOrigin()}/api/confirm/${encodeURIComponent(token)}`,
+        confirmUrl: `${getEmailActionOrigin()}/confirm/${encodeURIComponent(token)}`,
         repo,
         currentReleaseTag: currentReleaseTag ?? "No release yet",
       });
@@ -97,7 +97,7 @@ export function createResendService(resend: Resend): ResendService {
               await renderReleaseTemplate({
                 repo: release.repo,
                 tag: release.last_seen_tag ?? "new release detected",
-                unsubscribeUrl: `${getEmailActionOrigin()}/api/unsubscribe/${encodeURIComponent(
+                unsubscribeUrl: `${getEmailActionOrigin()}/unsubscribe/${encodeURIComponent(
                   recipient.unsubscribeToken
                 )}`,
               })

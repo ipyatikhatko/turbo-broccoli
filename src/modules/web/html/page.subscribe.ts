@@ -23,7 +23,7 @@ export function subscribePageHtml(): string {
     <div class="rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg shadow-slate-100 px-6 py-7">
       <form
         id="subscribe-form"
-        hx-post="/api/subscribe"
+        hx-post="/subscribe"
         hx-target="#subscribe-result"
         class="space-y-4"
       >
