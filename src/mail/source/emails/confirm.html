@@ -1,32 +1,34 @@
 <component src="layouts/main.html">
-  <h1 class="m-0 text-2xl font-bold text-slate-900">
+  <h1 class="m-0 text-2xl font-bold leading-tight text-slate-900">
     Confirm your subscription
   </h1>
-  <div class="[&>p]:mt-4 [&>p]:text-base [&>p]:leading-7 [&>p]:text-slate-600">
-    <p>
-      You are about to subscribe to future release notifications for
-      <strong>{{ repo }}</strong>.
-    </p>
-    <p>
-      Current latest release tag:
-      <a href="https://github.com/{{ repo }}/releases/{{ currentReleaseTag }}"
-        >{{ currentReleaseTag }}</a
-      >.
-    </p>
 
-    <p class="text-xs">
-      You will receive email only when a newer release appears.
-    </p>
-  </div>
-  <p class="mt-4">
+  <p class="mb-0 mt-3 text-sm leading-6 text-slate-600">
+    You asked to receive release notifications for
+    <strong class="font-semibold text-slate-900">{{ repo }}</strong>.
+    Click the button below to confirm.
+  </p>
+
+  <p class="mb-0 mt-2 text-sm leading-6 text-slate-500">
+    Current latest release:
+    <a
+      href="https://github.com/{{ repo }}/releases/{{ currentReleaseTag }}"
+      class="font-mono text-slate-700 no-underline"
+    >{{ currentReleaseTag }}</a>.
+    You will only be notified when a newer release ships.
+  </p>
+
+  <p class="mt-7 mb-0">
     <a
       href="{{ confirmUrl }}"
-      class="inline-block rounded-md bg-slate-900 px-6 py-3 text-sm font-semibold text-white no-underline"
+      class="inline-block rounded-lg bg-slate-900 px-6 py-3 text-sm font-semibold text-white no-underline"
     >
       Confirm subscription
     </a>
   </p>
-  <p class="mt-6 text-xs leading-6 text-slate-500">
-    If you didn't request this, you can ignore this email.
+
+  <p class="mb-0 mt-8 border-t border-slate-100 pt-6 text-xs leading-5 text-slate-400">
+    If you did not request this, you can safely ignore this email.
+    No subscription will be created without confirmation.
   </p>
 </component>

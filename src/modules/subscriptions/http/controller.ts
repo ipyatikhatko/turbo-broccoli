@@ -33,11 +33,12 @@ export interface ScannerController {
   scan(request: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 
-function handleDomainError(reply: FastifyReply, err: unknown): boolean {
-  if (!isSubscriptionDomainError(err)) return false;
-  const errorResponse = err.toResponse();
-
-  switch (err.code) {
+/** Maps subscription domain error codes to HTTP status (API + web HTMX subscribe). */
+export function setSubscriptionDomainErrorHttpStatus(
+  reply: FastifyReply,
+  code: string
+): void {
+  switch (code) {
     case "INVALID_REPO_FORMAT":
       reply.code(400);
       break;
@@ -69,7 +70,12 @@ function handleDomainError(reply: FastifyReply, err: unknown): boolean {
       reply.code(500);
       break;
   }
+}
 
+function handleDomainError(reply: FastifyReply, err: unknown): boolean {
+  if (!isSubscriptionDomainError(err)) return false;
+  const errorResponse = err.toResponse();
+  setSubscriptionDomainErrorHttpStatus(reply, err.code);
   reply.send(errorResponse);
   return true;
 }

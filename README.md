@@ -11,6 +11,24 @@ OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.
 - `GET /api/unsubscribe/{token}` - unsubscribe by token
 - `GET /api/subscriptions?email={email}` - list active subscriptions for an email
 
+## Public pages (MVC + HTMX)
+
+Browser UX uses **separate paths** from the OpenAPI JSON contract (no `Host` header switching):
+
+| Path | Response |
+|------|----------|
+| `GET /subscribe` | Subscription form (HTML) |
+| `POST /subscribe` | HTMX: HTML fragment (success or inline error) |
+| `GET /confirm/{token}` | **302** → `/subscription-confirmed` or `/error?code=…` (used in confirmation emails) |
+| `GET /unsubscribe/{token}` | **302** → `/unsubscribed` or `/error?code=…` (used in release emails) |
+| `GET /subscription-confirmed` | Success page after confirm |
+| `GET /unsubscribed` | Success page after unsubscribe |
+| `GET /error?code=` | Human-readable error view |
+
+Programmatic clients use **`/api/*`** only (see **API Endpoints** above).
+
+Static CSS: `/assets/web.css` (built with Tailwind; run `pnpm build` or `pnpm web:css`).
+
 ## Stack
 
 - Runtime: Node.js
@@ -21,6 +39,7 @@ OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.
 - Database: PostgreSQL
 - ORM: Drizzle ORM + Drizzle Kit migrations
 - Email templates: Maizzle + Tailwind (compiled to `src/mail/compiled`)
+- Public UI: HTMX + Tailwind (`pnpm web:css` / `pnpm build` → `dist/public/web.css`)
 - Email service: Resend (token is needed for sending emails)
 - Containerization: Docker + Docker Compose (local/dev)
 - Testing: Vitest
@@ -51,7 +70,8 @@ Use `.env`:
 
 ```env
 PORT=3000
-BASE_URL=http://localhost:3000
+BASE_URL=http://api.localhost:3000
+WEB_URL=http://app.localhost:3000
 DATABASE_URL=postgresql://postgres:postgres@db:5432/releases
 GITHUB_TOKEN=
 RESEND_API_KEY=
@@ -60,6 +80,9 @@ SCANNER_CRON_ENABLED=false
 SCANNER_CRON_EXPRESSION=0 */5 * * * *
 SCANNER_SECRET_KEY=
 ```
+
+- **`BASE_URL`**: Public origin used for Resend and as the fallback prefix for **email links** (`/confirm/…`, `/unsubscribe/…` on that host). Required at startup. Example: `https://api.example.com` or `http://localhost:3000`.
+- **`WEB_URL`**: Optional. When set, confirmation and unsubscribe links in emails use this origin instead of **`BASE_URL`**. Use when the app is served at a different public URL than **`BASE_URL`** (e.g. load balancer routes `app.example.com` → this service). **Does not change routing:** JSON vs HTML is determined only by the **path** (`/api/*` vs `/subscribe`, `/confirm/…`, etc.).
 
 For deployed environments (for example app container + Railway DB), for **database connectivity** you can pass only:
 
@@ -102,6 +125,21 @@ PostgreSQL must be reachable at `DATABASE_URL` before starting the app (migratio
 pnpm dev
 ```
 
+### Local subdomains (`api.localhost` / `app.localhost`) — optional
+
+Routing no longer depends on the hostname: **`http://localhost:3000/subscribe`** and **`http://localhost:3000/api/subscriptions`** both work in one process (e.g. Docker Compose).
+
+Use split origins only when you want **email links** to point at a different public URL than **`BASE_URL`**:
+
+1. Set **`WEB_URL`** to the browser-facing origin and **`BASE_URL`** to the API-facing origin (or the same value for a single host).
+2. If `ping app.localhost` fails on your machine, add hosts entries (the browser resolves names on the host, not inside Docker):
+   ```bash
+   pnpm local:subdomains
+   ```
+3. Open the app at your chosen origin; call **`/api/*`** with curl/OpenAPI against the same host (or **`BASE_URL`** if you split DNS).
+
+**Docker Compose:** `BASE_URL=http://localhost:3000` and empty **`WEB_URL`** is enough for local HTML + JSON on one port.
+
 ### Build and Start
 
 Production bundle is built with **esbuild** (`scripts/build.mjs`). Typechecking only (no emit) uses **TypeScript**:
@@ -125,7 +163,11 @@ Run:
 docker compose up --build
 ```
 
-This is intended primarily for local development. Production on GCP is: image in **Artifact Registry**, runtime on **Cloud Run**, database on **Cloud SQL** (or another managed Postgres).
+Then open **`http://localhost:${PORT:-3000}/subscribe`**. **`BASE_URL=http://localhost:3000`** (and optional empty **`WEB_URL`**) matches the published port; no subdomain setup is required for routing.
+
+**Environment:** Compose reads `.env` for variable substitution. The `api` service gets `DATABASE_URL` pointed at the `db` container automatically, and passes through **`SCANNER_SECRET_KEY`**, **`SCANNER_CRON_ENABLED`**, and **`SCANNER_CRON_EXPRESSION`** (set **`SCANNER_SECRET_KEY`** if you call **`POST /external/scan`** with **`X-Scanner-Key`**).
+
+This stack is intended primarily for local development. Production on GCP is: image in **Artifact Registry**, runtime on **Cloud Run**, database on **Cloud SQL** (or another managed Postgres).
 
 ## GCP: Artifact Registry (one-time)
 

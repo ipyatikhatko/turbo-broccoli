@@ -21,6 +21,8 @@ COPY drizzle.config.ts ./
 RUN pnpm build
 
 FROM base AS runner
+# Runtime env (Compose, Cloud Run, etc.): DATABASE_URL, BASE_URL, WEB_URL, GITHUB_TOKEN,
+# RESEND_API_KEY, RESEND_FROM, SCANNER_SECRET_KEY, SCANNER_CRON_*, PORT — see .env.example.
 ENV NODE_ENV=production
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
