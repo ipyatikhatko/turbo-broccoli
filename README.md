@@ -2,9 +2,14 @@
 
 API service for subscribing users to email notifications about new releases in GitHub repositories.
 
-OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.swagger.io/) or any OpenAPI viewer to inspect it)
+# Deployment
+
+Deployed to Cloud Run: https://app.episodium.co
+Cloud Scheduler: Hits protected `external/scan` endpoint on Cloud Run every 15 minutes
 
 ## API Endpoints
+
+OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.swagger.io/) or any OpenAPI viewer to inspect it)
 
 - `POST /api/subscribe` - subscribe an email to a repository (`owner/repo`)
 - `GET /api/confirm/{token}` - confirm subscription
@@ -15,15 +20,15 @@ OpenAPI contract: `/src/docs/openapi.yaml` (use [Swagger Editor](https://editor.
 
 Browser UX uses **separate paths** from the OpenAPI JSON contract (no `Host` header switching):
 
-| Path | Response |
-|------|----------|
-| `GET /subscribe` | Subscription form (HTML) |
-| `POST /subscribe` | HTMX: HTML fragment (success or inline error) |
-| `GET /confirm/{token}` | **302** → `/subscription-confirmed` or `/error?code=…` (used in confirmation emails) |
-| `GET /unsubscribe/{token}` | **302** → `/unsubscribed` or `/error?code=…` (used in release emails) |
-| `GET /subscription-confirmed` | Success page after confirm |
-| `GET /unsubscribed` | Success page after unsubscribe |
-| `GET /error?code=` | Human-readable error view |
+| Path                          | Response                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| `GET /subscribe`              | Subscription form (HTML)                                                             |
+| `POST /subscribe`             | HTMX: HTML fragment (success or inline error)                                        |
+| `GET /confirm/{token}`        | **302** → `/subscription-confirmed` or `/error?code=…` (used in confirmation emails) |
+| `GET /unsubscribe/{token}`    | **302** → `/unsubscribed` or `/error?code=…` (used in release emails)                |
+| `GET /subscription-confirmed` | Success page after confirm                                                           |
+| `GET /unsubscribed`           | Success page after unsubscribe                                                       |
+| `GET /error?code=`            | Human-readable error view                                                            |
 
 Programmatic clients use **`/api/*`** only (see **API Endpoints** above).
 
@@ -191,18 +196,18 @@ Workflows:
 
 ### GitHub secrets (`publish-gcp.yml`)
 
-| Name | Purpose |
-|------|---------|
-| `GCP_PROJECT_ID` | Google Cloud project id |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Workload Identity Provider resource name (OIDC) |
-| `GCP_SERVICE_ACCOUNT` | Service account email GitHub Actions impersonates (needs `artifactregistry.writer` for push) |
+| Name                             | Purpose                                                                                      |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| `GCP_PROJECT_ID`                 | Google Cloud project id                                                                      |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Workload Identity Provider resource name (OIDC)                                              |
+| `GCP_SERVICE_ACCOUNT`            | Service account email GitHub Actions impersonates (needs `artifactregistry.writer` for push) |
 
 ### GitHub variables (`publish-gcp.yml`)
 
-| Name | Example | Purpose |
-|------|---------|---------|
-| `GCP_REGION` | `us-central1` | **Required.** Must match the Artifact Registry region (`REGION-docker.pkg.dev`). |
-| `GCP_ARTIFACT_REGISTRY_REPOSITORY` | `turbo-broccoli` | Optional. Repository id if not `turbo-broccoli`. |
+| Name                               | Example          | Purpose                                                                          |
+| ---------------------------------- | ---------------- | -------------------------------------------------------------------------------- |
+| `GCP_REGION`                       | `us-central1`    | **Required.** Must match the Artifact Registry region (`REGION-docker.pkg.dev`). |
+| `GCP_ARTIFACT_REGISTRY_REPOSITORY` | `turbo-broccoli` | Optional. Repository id if not `turbo-broccoli`.                                 |
 
 ### Security model
 
