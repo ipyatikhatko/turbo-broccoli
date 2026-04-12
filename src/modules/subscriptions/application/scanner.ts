@@ -19,10 +19,11 @@ export interface SubscriptionsScanner {
 }
 
 interface ScanCandidate {
+  subscriptionId: string;
   email: string;
   repo: string;
   unsubscribeToken: string;
-  lastSeenTag: string | null;
+  lastNotifiedTag: string | null;
 }
 
 const RELEASE_EMAIL_BATCH_SIZE = 100;
@@ -52,7 +53,7 @@ export function createSubscriptionsScanner(deps: {
   github: Pick<IGitHubRepos, "getLatestReleaseTag">;
   subscriptions: Pick<
     ISubscriptionRepository,
-    "findActiveForScan" | "updateRepoLastSeenTag"
+    "findActiveForScan" | "updateLastNotifiedTagForSubscriptionIds"
   >;
   resend: Pick<ResendService, "sendReleasesBatchEmail">;
   logger: ScannerLogger;
@@ -74,36 +75,33 @@ export function createSubscriptionsScanner(deps: {
           continue;
         }
 
-        const latestTag = await deps.github.getLatestReleaseTag(
-          parsed.owner,
-          parsed.repo
-        );
-        if (!latestTag) continue;
-
-        const previousTag = subscribers[0]?.lastSeenTag ?? null;
-        if (previousTag === null) {
-          await deps.subscriptions.updateRepoLastSeenTag(repo, latestTag);
-          reposUpdated += 1;
-          deps.logger.info(
-            "Initialized repo baseline tag on first observed scan",
-            { repo, tag: latestTag }
+        let latestTag: string | null;
+        try {
+          latestTag = await deps.github.getLatestReleaseTag(
+            parsed.owner,
+            parsed.repo
           );
+        } catch (err) {
+          deps.logger.error("Failed to fetch latest tag for repo", {
+            repo,
+            error: err,
+          });
           continue;
         }
-        if (previousTag === latestTag) continue;
+        if (!latestTag) continue;
 
-        let sentAllForRepo = true;
+        const toNotify = subscribers.filter(
+          (s) => s.lastNotifiedTag !== latestTag
+        );
+        if (toNotify.length === 0) continue;
+
+        const successfulIds: string[] = [];
         for (const recipientsChunk of chunk(
-          subscribers,
+          toNotify,
           RELEASE_EMAIL_BATCH_SIZE
         )) {
           const response = await deps.resend.sendReleasesBatchEmail(
-            {
-              email: recipientsChunk[0]?.email ?? "",
-              repo,
-              confirmed: true,
-              last_seen_tag: latestTag,
-            },
+            { repo, tag: latestTag },
             recipientsChunk.map((subscriber) => ({
               email: subscriber.email,
               unsubscribeToken: subscriber.unsubscribeToken,
@@ -111,7 +109,6 @@ export function createSubscriptionsScanner(deps: {
           );
 
           if (response.error) {
-            sentAllForRepo = false;
             deps.logger.error("Failed to send release email", {
               repo,
               recipientCount: recipientsChunk.length,
@@ -121,12 +118,16 @@ export function createSubscriptionsScanner(deps: {
           }
 
           notificationsSent += recipientsChunk.length;
+          successfulIds.push(...recipientsChunk.map((s) => s.subscriptionId));
         }
 
-        if (!sentAllForRepo) continue;
-
-        await deps.subscriptions.updateRepoLastSeenTag(repo, latestTag);
-        reposUpdated += 1;
+        if (successfulIds.length > 0) {
+          await deps.subscriptions.updateLastNotifiedTagForSubscriptionIds(
+            successfulIds,
+            latestTag
+          );
+          reposUpdated += 1;
+        }
       }
 
       const result: ScannerRunResult = {

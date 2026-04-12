@@ -22,12 +22,13 @@ describe("createSubscriptionsService", () => {
       findByEmailAndRepo: vi.fn().mockResolvedValue(null),
       findActiveByEmail: vi.fn().mockResolvedValue([]),
       insertPending: vi.fn().mockResolvedValue(undefined),
-      findByConfirmToken: vi.fn().mockResolvedValue(null),
+      findPendingWithRepoByConfirmToken: vi.fn().mockResolvedValue(null),
       findByUnsubscribeToken: vi.fn().mockResolvedValue(null),
       findActiveForScan: vi.fn().mockResolvedValue([]),
-      confirm: vi.fn().mockResolvedValue(undefined),
+      confirmAndSetLastNotifiedTag: vi.fn().mockResolvedValue(undefined),
+      deletePendingByConfirmToken: vi.fn().mockResolvedValue(undefined),
       unsubscribe: vi.fn().mockResolvedValue(undefined),
-      updateRepoLastSeenTag: vi.fn().mockResolvedValue(undefined),
+      updateLastNotifiedTagForSubscriptionIds: vi.fn().mockResolvedValue(undefined),
     };
   }
 
@@ -48,24 +49,21 @@ describe("createSubscriptionsService", () => {
       repo: "golang/go",
     });
 
-    expect(resend.sendConfirmationEmail).toHaveBeenCalledTimes(1);
-    expect(resend.sendConfirmationEmail).toHaveBeenCalledWith(
-      "a@example.com",
-      expect.any(String),
-      "golang/go",
-      "v1.2.3"
-    );
     expect(subscriptions.insertPending).toHaveBeenCalledTimes(1);
     expect(subscriptions.insertPending.mock.calls[0]?.[0]).toMatchObject({
       email: "a@example.com",
       repo: "golang/go",
     });
-    expect(subscriptions.insertPending.mock.calls[0]?.[0]?.confirmToken).toHaveLength(
-      48
+    expect(subscriptions.insertPending.mock.calls[0]?.[0]?.confirmToken).toHaveLength(48);
+    expect(subscriptions.insertPending.mock.calls[0]?.[0]?.unsubscribeToken).toHaveLength(48);
+    expect(resend.sendConfirmationEmail).toHaveBeenCalledTimes(1);
+    expect(resend.sendConfirmationEmail).toHaveBeenCalledWith(
+      "a@example.com",
+      subscriptions.insertPending.mock.calls[0]?.[0]?.confirmToken,
+      "golang/go",
+      "v1.2.3"
     );
-    expect(
-      subscriptions.insertPending.mock.calls[0]?.[0]?.unsubscribeToken
-    ).toHaveLength(48);
+    expect(subscriptions.deletePendingByConfirmToken).not.toHaveBeenCalled();
   });
 
   it("subscribe throws InvalidRepoFormatError for bad slug", async () => {
@@ -101,6 +99,7 @@ describe("createSubscriptionsService", () => {
       id: "existing-id",
       email: "a@example.com",
       repoId: "repo-id",
+      lastNotifiedTag: null,
       confirmed: false,
       confirmToken: "confirm-token",
       unsubscribeToken: "unsubscribe-token",
@@ -122,7 +121,7 @@ describe("createSubscriptionsService", () => {
     ).rejects.toMatchObject({ code: "SUBSCRIPTION_CONFLICT" });
   });
 
-  it("subscribe throws ResendApiError and does not persist when email send fails", async () => {
+  it("subscribe throws ResendApiError and rolls back pending row when email send fails", async () => {
     const subscriptions = createRepositoryMock();
     const resend = createResendMock();
     resend.sendConfirmationEmail.mockResolvedValue({
@@ -142,7 +141,11 @@ describe("createSubscriptionsService", () => {
     await expect(
       service.subscribe({ email: "a@example.com", repo: "golang/go" })
     ).rejects.toMatchObject({ code: "RESEND_API_ERROR" });
-    expect(subscriptions.insertPending).not.toHaveBeenCalled();
+    expect(subscriptions.insertPending).toHaveBeenCalledTimes(1);
+    expect(subscriptions.deletePendingByConfirmToken).toHaveBeenCalledTimes(1);
+    expect(subscriptions.deletePendingByConfirmToken).toHaveBeenCalledWith(
+      subscriptions.insertPending.mock.calls[0]?.[0]?.confirmToken
+    );
   });
 
   it("subscribe passes fallback release context when repo has no releases", async () => {
@@ -171,35 +174,75 @@ describe("createSubscriptionsService", () => {
     );
   });
 
-  it("confirm marks pending subscription as confirmed", async () => {
+  it("confirm marks pending subscription as confirmed and stores release baseline", async () => {
     const subscriptions = createRepositoryMock();
-    subscriptions.findByConfirmToken.mockResolvedValue({
-      id: "sub-id",
-      email: "a@example.com",
-      repoId: "repo-id",
-      confirmed: false,
-      confirmToken: "confirm-token",
-      unsubscribeToken: "unsubscribe-token",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    subscriptions.findPendingWithRepoByConfirmToken.mockResolvedValue({
+      subscription: {
+        id: "sub-id",
+        email: "a@example.com",
+        repoId: "repo-id",
+        lastNotifiedTag: null,
+        confirmed: false,
+        confirmToken: "confirm-token",
+        unsubscribeToken: "unsubscribe-token",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      repoFullName: "golang/go",
     });
 
     const service = createSubscriptionsService({
       github: {
         repoExists: vi.fn().mockResolvedValue(true),
-        getLatestReleaseTag: vi.fn(),
+        getLatestReleaseTag: vi.fn().mockResolvedValue("v1.0.0"),
       },
       subscriptions,
       resend: createResendMock(),
     });
 
     await service.confirm({ token: "confirm-token" });
-    expect(subscriptions.confirm).toHaveBeenCalledWith("confirm-token");
+    expect(subscriptions.confirmAndSetLastNotifiedTag).toHaveBeenCalledWith(
+      "confirm-token",
+      "v1.0.0"
+    );
+  });
+
+  it("confirm stores null baseline when repo has no releases yet", async () => {
+    const subscriptions = createRepositoryMock();
+    subscriptions.findPendingWithRepoByConfirmToken.mockResolvedValue({
+      subscription: {
+        id: "sub-id",
+        email: "a@example.com",
+        repoId: "repo-id",
+        lastNotifiedTag: null,
+        confirmed: false,
+        confirmToken: "confirm-token",
+        unsubscribeToken: "unsubscribe-token",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      repoFullName: "golang/go",
+    });
+
+    const service = createSubscriptionsService({
+      github: {
+        repoExists: vi.fn().mockResolvedValue(true),
+        getLatestReleaseTag: vi.fn().mockResolvedValue(null),
+      },
+      subscriptions,
+      resend: createResendMock(),
+    });
+
+    await service.confirm({ token: "confirm-token" });
+    expect(subscriptions.confirmAndSetLastNotifiedTag).toHaveBeenCalledWith(
+      "confirm-token",
+      null
+    );
   });
 
   it("confirm throws SubscriptionNotFoundError for unknown token", async () => {
     const subscriptions = createRepositoryMock();
-    subscriptions.findByConfirmToken.mockResolvedValue(null);
+    subscriptions.findPendingWithRepoByConfirmToken.mockResolvedValue(null);
 
     const service = createSubscriptionsService({
       github: {
@@ -217,15 +260,19 @@ describe("createSubscriptionsService", () => {
 
   it("confirm throws SubscriptionAlreadyConfirmedError for confirmed subscription", async () => {
     const subscriptions = createRepositoryMock();
-    subscriptions.findByConfirmToken.mockResolvedValue({
-      id: "sub-id",
-      email: "a@example.com",
-      repoId: "repo-id",
-      confirmed: true,
-      confirmToken: "confirm-token",
-      unsubscribeToken: "unsubscribe-token",
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    subscriptions.findPendingWithRepoByConfirmToken.mockResolvedValue({
+      subscription: {
+        id: "sub-id",
+        email: "a@example.com",
+        repoId: "repo-id",
+        lastNotifiedTag: "v1.0.0",
+        confirmed: true,
+        confirmToken: "confirm-token",
+        unsubscribeToken: "unsubscribe-token",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      repoFullName: "golang/go",
     });
 
     const service = createSubscriptionsService({
@@ -242,7 +289,7 @@ describe("createSubscriptionsService", () => {
     ).rejects.toMatchObject({
       code: "SUBSCRIPTION_ALREADY_CONFIRMED",
     });
-    expect(subscriptions.confirm).not.toHaveBeenCalled();
+    expect(subscriptions.confirmAndSetLastNotifiedTag).not.toHaveBeenCalled();
   });
 
   it("unsubscribe removes confirmed subscription by unsubscribe token", async () => {
@@ -251,6 +298,7 @@ describe("createSubscriptionsService", () => {
       id: "sub-id",
       email: "a@example.com",
       repoId: "repo-id",
+      lastNotifiedTag: null,
       confirmed: true,
       confirmToken: "confirm-token",
       unsubscribeToken: "unsubscribe-token",
@@ -298,6 +346,7 @@ describe("createSubscriptionsService", () => {
       id: "sub-id",
       email: "a@example.com",
       repoId: "repo-id",
+      lastNotifiedTag: null,
       confirmed: false,
       confirmToken: "confirm-token",
       unsubscribeToken: "unsubscribe-token",

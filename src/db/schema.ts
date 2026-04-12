@@ -8,15 +8,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Repositories are tracked separately so release state (`last_seen_tag`)
- * is stored once per repo, not once per subscriber row.
+ * Repositories are tracked separately so multiple subscribers can share one GitHub slug.
+ * Per-subscriber release baseline lives on `subscriptions.last_notified_tag`.
  */
 export const repos = pgTable(
   "repos",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     fullName: text("full_name").notNull(),
-    lastSeenTag: text("last_seen_tag"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -29,7 +28,7 @@ export const repos = pgTable(
 
 /**
  * Public API fields still align with OpenAPI `definitions.Subscription`.
- * The mapper joins subscriptions with repos to provide `repo` and `last_seen_tag`.
+ * The mapper joins subscriptions with repos to provide `repo` and `last_seen_tag` (API name).
  */
 export const subscriptions = pgTable(
   "subscriptions",
@@ -39,6 +38,8 @@ export const subscriptions = pgTable(
     repoId: uuid("repo_id")
       .notNull()
       .references(() => repos.id, { onDelete: "cascade" }),
+    /** Latest release tag the subscriber is caught up to (set at confirm + after notify). */
+    lastNotifiedTag: text("last_notified_tag"),
     confirmed: boolean("confirmed").notNull().default(false),
     confirmToken: text("confirm_token").notNull(),
     unsubscribeToken: text("unsubscribe_token").notNull(),

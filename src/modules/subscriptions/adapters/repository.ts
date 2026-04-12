@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type { Db } from "../../../db/client.ts";
 import { repos, subscriptions } from "../../../db/schema.ts";
@@ -58,7 +58,7 @@ export function createSubscriptionRepository(db: Db): ISubscriptionRepository {
           email: subscriptions.email,
           repo: repos.fullName,
           confirmed: subscriptions.confirmed,
-          lastSeenTag: repos.lastSeenTag,
+          lastSeenTag: subscriptions.lastNotifiedTag,
         })
         .from(subscriptions)
         .innerJoin(repos, eq(subscriptions.repoId, repos.id))
@@ -78,20 +78,35 @@ export function createSubscriptionRepository(db: Db): ISubscriptionRepository {
       });
     },
 
-    async findByConfirmToken(token) {
+    async findPendingWithRepoByConfirmToken(token) {
       const rows = await db
         .select()
         .from(subscriptions)
+        .innerJoin(repos, eq(subscriptions.repoId, repos.id))
         .where(eq(subscriptions.confirmToken, token))
         .limit(1);
-      return rows[0] ?? null;
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        subscription: row.subscriptions,
+        repoFullName: row.repos.fullName,
+      };
     },
 
-    async confirm(token) {
+    async confirmAndSetLastNotifiedTag(confirmToken, lastNotifiedTag) {
       await db
         .update(subscriptions)
-        .set({ confirmed: true })
-        .where(eq(subscriptions.confirmToken, token));
+        .set({
+          confirmed: true,
+          lastNotifiedTag,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(subscriptions.confirmToken, confirmToken),
+            eq(subscriptions.confirmed, false)
+          )
+        );
     },
     async findByUnsubscribeToken(token) {
       const rows = await db
@@ -104,25 +119,38 @@ export function createSubscriptionRepository(db: Db): ISubscriptionRepository {
     async findActiveForScan() {
       return db
         .select({
+          subscriptionId: subscriptions.id,
           email: subscriptions.email,
           repo: repos.fullName,
           unsubscribeToken: subscriptions.unsubscribeToken,
-          lastSeenTag: repos.lastSeenTag,
+          lastNotifiedTag: subscriptions.lastNotifiedTag,
         })
         .from(subscriptions)
         .innerJoin(repos, eq(subscriptions.repoId, repos.id))
         .where(eq(subscriptions.confirmed, true));
     },
+    async deletePendingByConfirmToken(confirmToken) {
+      await db
+        .delete(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.confirmToken, confirmToken),
+            eq(subscriptions.confirmed, false)
+          )
+        );
+    },
+
     async unsubscribe(token) {
       await db
         .delete(subscriptions)
         .where(eq(subscriptions.unsubscribeToken, token));
     },
-    async updateRepoLastSeenTag(repo, tag) {
+    async updateLastNotifiedTagForSubscriptionIds(ids, tag) {
+      if (ids.length === 0) return;
       await db
-        .update(repos)
-        .set({ lastSeenTag: tag, updatedAt: new Date() })
-        .where(eq(repos.fullName, repo));
+        .update(subscriptions)
+        .set({ lastNotifiedTag: tag, updatedAt: new Date() })
+        .where(inArray(subscriptions.id, ids));
     },
   };
 }

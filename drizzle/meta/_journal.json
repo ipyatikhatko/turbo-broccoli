@@ -15,6 +15,13 @@
       "when": 1775775600000,
       "tag": "0001_solidus_repos_split",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775880000000,
+      "tag": "0002_subscriptions_last_notified",
+      "breakpoints": true
     }
   ]
 }

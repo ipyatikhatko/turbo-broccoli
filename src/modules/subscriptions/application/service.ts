@@ -43,7 +43,10 @@ export function createSubscriptionsService(deps: {
 }): SubscriptionsService {
   return {
     async subscribe(input) {
-      const parsedSlug = parseOwnerRepo(input.repo);
+      const email = input.email.trim();
+      const repo = input.repo.trim();
+
+      const parsedSlug = parseOwnerRepo(repo);
       if (!parsedSlug) throw new InvalidRepoFormatError();
 
       const exists = await deps.github.repoExists(
@@ -52,10 +55,7 @@ export function createSubscriptionsService(deps: {
       );
       if (!exists) throw new GithubRepoNotFoundError();
 
-      const existing = await deps.subscriptions.findByEmailAndRepo(
-        input.email,
-        input.repo.trim()
-      );
+      const existing = await deps.subscriptions.findByEmailAndRepo(email, repo);
       if (existing) throw new SubscriptionConflictError();
 
       const confirmToken = randomToken();
@@ -65,30 +65,46 @@ export function createSubscriptionsService(deps: {
         parsedSlug.repo
       );
 
-      const email = await deps.resend.sendConfirmationEmail(
-        input.email,
-        confirmToken,
-        input.repo.trim(),
-        currentReleaseTag
-      );
-      if (email.error) throw new ResendApiError(email.error.message);
-
       await deps.subscriptions.insertPending({
-        email: input.email.trim(),
-        repo: input.repo.trim(),
+        email,
+        repo,
         confirmToken,
         unsubscribeToken,
       });
+
+      const emailResult = await deps.resend.sendConfirmationEmail(
+        email,
+        confirmToken,
+        repo,
+        currentReleaseTag
+      );
+      if (emailResult.error) {
+        await deps.subscriptions.deletePendingByConfirmToken(confirmToken);
+        throw new ResendApiError(emailResult.error.message);
+      }
     },
 
     async confirm(input) {
-      const subscription = await deps.subscriptions.findByConfirmToken(
+      const ctx = await deps.subscriptions.findPendingWithRepoByConfirmToken(
         input.token
       );
-      if (!subscription) throw new SubscriptionNotFoundError();
-      if (subscription.confirmed) throw new SubscriptionAlreadyConfirmedError();
+      if (!ctx) throw new SubscriptionNotFoundError();
+      if (ctx.subscription.confirmed) {
+        throw new SubscriptionAlreadyConfirmedError();
+      }
 
-      await deps.subscriptions.confirm(subscription.confirmToken);
+      const parsedSlug = parseOwnerRepo(ctx.repoFullName);
+      if (!parsedSlug) throw new InvalidRepoFormatError();
+
+      const tagAtConfirm = await deps.github.getLatestReleaseTag(
+        parsedSlug.owner,
+        parsedSlug.repo
+      );
+
+      await deps.subscriptions.confirmAndSetLastNotifiedTag(
+        ctx.subscription.confirmToken,
+        tagAtConfirm
+      );
     },
 
     async unsubscribe(_input) {

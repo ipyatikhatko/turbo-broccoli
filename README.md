@@ -111,6 +111,7 @@ Scanner behavior:
 - `SCANNER_CRON_ENABLED=true` enables in-process cron scanning.
 - `SCANNER_CRON_EXPRESSION` controls schedule (toad-scheduler cron format with seconds).
 - `POST /external/scan` triggers one scanner run and requires header `X-Scanner-Key: <SCANNER_SECRET_KEY>` (so Cloud Scheduler can use OIDC on `Authorization` for Cloud Run while sending the app secret separately).
+- On **confirm**, the current GitHub latest release tag (if any) is stored on that subscription as the baseline so the first scan does not blast everyone for an old tag. If there was **no** release at confirm time, the first scan after a tag appears sends a release email (older builds incorrectly only set baseline and skipped mail).
 
 ## Run Locally
 
@@ -211,7 +212,7 @@ Workflows:
 ## Database and Migrations
 
 - **ORM**: Drizzle with the `pg` driver (`src/db/client.ts`).
-- **Schema**: `src/db/schema.ts`. Data is normalized into **`repos`** (with `full_name`, `last_seen_tag`) and **`subscriptions`** (email/tokens/confirmed + `repo_id`). The API response shape remains OpenAPI-compatible via `src/db/subscription-mapper.ts`.
+- **Schema**: `src/db/schema.ts`. Data is normalized into **`repos`** (`full_name`) and **`subscriptions`** (email/tokens/confirmed + `repo_id` + per-row **`last_notified_tag`**, exposed as `last_seen_tag` in the API). The API response shape remains OpenAPI-compatible via `src/db/subscription-mapper.ts`.
 - **SQL migrations**: generated into `drizzle/` (committed). After changing the schema, run:
 
 ```bash
